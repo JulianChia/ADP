@@ -1,0 +1,2 @@
+numpy==1.26.4; python_version >= '3.9'
+pillow==10.2.0; python_version >= '3.8'
