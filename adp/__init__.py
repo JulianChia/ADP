@@ -1,7 +1,12 @@
 # print(f"{__name__}")
 
 # Package modules
-exclude = ["exclude", "functions", "widgets"]
+from adp.functions import *
+from adp.widgets import *
+
+exclude = ["exclude", "functions", "widgets", "About", 'constants',
+		   'duplicates_finder_concurrent', 'duplicates_finder_serial',
+		   'photo_finder_concurrent', 'photo_finder_serial', 'main', 'ADP']
 
 __all__ = [
 	name for name in dir()
@@ -12,5 +17,5 @@ __all__ = [
 
 __version__ = '0.1'
 __author__ = 'Chia Yan Hon, Julian.'
-__copyright__ = "Copyright 2023, Chia Yan Hon, Julian."
+__copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __license__ = "Apache License, Version 2.0"
