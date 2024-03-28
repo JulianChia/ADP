@@ -1,7 +1,5 @@
 /Samples/
-/__pycache__/
-/adp/__pycache__/
-/adp/functions/__pycache__/
-/adp/widgets/__pycache__/
+__pycache__
 .*
 !/.gitignore
+*.xcf
