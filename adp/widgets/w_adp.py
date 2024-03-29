@@ -382,7 +382,7 @@ def main():
                              "'g=gallery' mode.")
     layouts = {"h": "horizontal", "v": "vertical"}
     parser.add_argument("-l", "--layout",
-                        type=str, default='h', choices=layouts.keys(),
+                        type=str, choices=layouts.keys(),
                         help="Set GUI layout to be either 'h=horizontal', or "
                              "'v=vertical'.")
     cfe = {"p": "process", "t": "thread"}
@@ -399,19 +399,35 @@ def main():
         case "f":
             ADP(mode=mode[args.mode], cfe=cfe[args.cfe])
         case "t":
-            ADP(mode=mode[args.mode], layout=layouts[args.layout],
-                cfe=cfe[args.cfe])
+            try:
+                lay = layouts[args.layout]
+            except KeyError as exc:
+                if not exc.args[0]:
+                    lay = "vertical"
+                else:
+                    raise KeyError(exc.args[0])
+            finally:
+                ADP(mode=mode[args.mode], layout=lay, cfe=cfe[args.cfe])
         case "g":
-            ADP(mode=mode[args.mode], layout=layouts[args.layout],
-                cfe=cfe[args.cfe])
+            try:
+                lay = layouts[args.layout]
+            except KeyError as exc:
+                if not exc.args[0]:
+                    lay = "horizontal"
+                else:
+                    raise KeyError(exc.args[0])
+            finally:
+                ADP(mode=mode[args.mode], layout=lay, cfe="thread")
+                # Note: cfe="process" in gallery mode results in unstable
+                #       performance. Consequently, cfe="thread" must be used
+                #       in the meantime.
 
 
 ###############################################################################
 # App SCRIPT TO CALL APPLICATION
 ###############################################################################
 if __name__ == '__main__':
-    # main()
     # ADP(mode="find", cfe="process")  # stable
     # ADP(mode="table", layout="vertical", cfe="process")  # stable
-    # ADP(mode="gallery", layout="horizontal", cfe="process")  # hangs randomly after several reruns
-    ADP(mode="gallery", layout="horizontal", cfe="thread")  # stable but slower than process
+    # ADP(mode="gallery", layout="horizontal", cfe="process")  # unstable: hangs randomly after several reruns
+    ADP(mode="gallery", layout="horizontal", cfe="thread")  # stable but slower than cfe="process"
