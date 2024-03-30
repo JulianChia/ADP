@@ -6,6 +6,7 @@ import tkinter.ttk as ttk
 import tkinter.messagebox as messagebox
 import platform
 from time import perf_counter
+from pathlib import Path
 
 # Project modules
 from adp.functions import timings
@@ -52,12 +53,12 @@ class Table(ttk.Frame):
        find.sqlite3_db after the find widget generates the
        "<<Sqlite3DBPopulated>>" virtual event or when the clicked `Populate`
        ttk.Button widget is released.
-    4. For Tk 8.6 and below, once a tag is created in a Treeview, it cannot
+    4. In Tk 8.6 and below, once a tag is created in a Treeview, it cannot
        be deleted. It remains throughout the lifetime of the Treeview. This
        is a memory leak bug and it will only be fixed in Tk 8.7 (see
        https://stackoverflow.com/questions/76689557/deleting-all-items-of-a-ttk-treeview-does-not-delete-or-unconfigure-their-tagnam).
        To avoid this memory leak bug when resetting the Treeview widget,
-       the only available option is to destroy and recreate the Treeview widget.
+       the only option is to destroy and recreate the Treeview widget.
 
     icon from <a href="https://www.flaticon.com/free-icons/user-interface"
     title="user interface icons"> User interface icons created by Metami
@@ -612,10 +613,13 @@ class Table(ttk.Frame):
         # print(f"{selected=}")
 
         # 4. Delete the selected photo files
-        # for fiid, (giid, fpath) in selected.items():
-        #     fpath = Path(fpath)
-        #     fpath.unlink()
-        print(f"*** {len(selected)} PHOTOS DELETED! ***")
+        start = perf_counter()
+        for fiid, (giid, fpath) in selected.items():
+            fpath = Path(fpath)
+            fpath.unlink()
+        end = perf_counter()
+        dtime = end - start
+        print(f"*** {len(selected)} PHOTOS DELETED in {dtime:.6f} secs.! ***")
 
         # 5. Generate virtual event to indicate deletion is done.
         # print(f"<<DeletionDone>>")
