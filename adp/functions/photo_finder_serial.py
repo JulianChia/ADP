@@ -3,6 +3,7 @@
 # Python modules
 import os
 import hashlib
+from typing import Union
 
 # External Packages
 import numpy as np
@@ -24,7 +25,7 @@ class RasterImage:
     size: int
 
 
-def rscandir_images(path):
+def rscandir_images(path: Union[str, bytes, os.PathLike]) -> RasterImage:
     """Recursively scan a directory (& its sub-directories) for raster images
     that PIL can open and that are unhidden. Yields the path corresponding to
     these images in str format."""
@@ -48,7 +49,7 @@ def rscandir_images(path):
             yield from rscandir_images(itr.path)
 
 
-def tuple_rscandir_images(path):
+def tuple_rscandir_images(path: Union[str, bytes, os.PathLike]) -> tuple:
     # print(f"def tuple_rscandir_images(path):")
     rimages = tuple(rscandir_images(path))
     # print(f'{len(rimages)=} {rimages=}')

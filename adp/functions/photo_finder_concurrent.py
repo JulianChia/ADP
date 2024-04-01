@@ -7,6 +7,7 @@ import concurrent.futures as cf
 import math
 from itertools import chain
 from datetime import datetime
+from typing import Union
 
 # Package module
 from adp.functions.dataklasses import dataklass
@@ -40,7 +41,7 @@ class RasterImage:
     size: int
 
 
-def scandir_images(dirpath: os.PathLike):
+def scandir_images(dirpath: Union[str, bytes, os.PathLike]) -> RasterImage:
     """Function to scan a directory for unhidden raster images that PIL can
     open. Yields RasterImages instance of these image files."""
     # print(f"scandir_images {threading.main_thread()=}"
@@ -75,7 +76,7 @@ def scandir_images(dirpath: os.PathLike):
                     yield RasterImage(hashhex, itr.path, os.stat(itr).st_size)
 
 
-def tuple_scandir_images(path: os.PathLike):
+def tuple_scandir_images(path: Union[str, bytes, os.PathLike]):
     """Function returns a tuple of RasterImage instances found in path."""
     # print(f"{threading.main_thread()=} {threading.current_thread()=}")
     rimages = tuple(scandir_images(path))
@@ -83,7 +84,7 @@ def tuple_scandir_images(path: os.PathLike):
     return rimages
 
 
-def fast_scandir(dirname: os.PathLike):
+def fast_scandir(dirname: Union[str, bytes, os.PathLike]):
     """Function to recursively find all sub-directory paths in dirname and
     return a list of all sub-directory paths (i.e. string objects)."""
     subfolders = [f.path for f in os.scandir(dirname) if f.is_dir() and not
