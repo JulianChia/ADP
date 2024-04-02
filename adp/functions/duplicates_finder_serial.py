@@ -10,7 +10,7 @@ __copyright__ = "Copyright 2023, Chia Yan Hon, Julian."
 __license__ = "Apache License, Version 2.0"
 
 
-def detect_duplicates_serially(rimages):
+def detect_duplicates_serially(rimages: list) -> dict:
 	"""Function to detect duplicated raster images by comparing their hash
 	(i.e. sha3_256) hex values. Returns a dictionary of
 	duplicates = {

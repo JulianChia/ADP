@@ -35,7 +35,7 @@ def timings(time: float) -> tuple:
     return time, 'secs'
 
 
-def sort_photos_by_creation_time(filestrpaths):
+def sort_photos_by_creation_time(filestrpaths: list) -> list:
     """Identify which photo is the original and which are copies using
     their creation date. Oldest is treated as original. They are then
     sorted in ascending order, i.e. oldest first, followed by
