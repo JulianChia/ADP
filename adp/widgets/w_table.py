@@ -1140,7 +1140,7 @@ if __name__ == '__main__':
     root.title('ANY DUPLICATED PHOTOS?')
 
     # Commands to create icon
-    app_icon = str(CWD) + "/icons/app/ADP.png"
+    app_icon = str(CWD) + "/icons/app/ADP_icon_256.png"
     wm_icon = ImageTk.PhotoImage(file=app_icon)
     wm_icon.image = app_icon
     root.tk.call('wm', 'iconphoto', root, wm_icon)

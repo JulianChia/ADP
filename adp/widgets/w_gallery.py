@@ -481,7 +481,7 @@ if __name__ == '__main__':
     root.geometry('1300x600')
 
     # Commands to create icon
-    app_icon = str(CWD) + "/icons/app/ADP.png"
+    app_icon = str(CWD) + "/icons/app/ADP_icon_256.png"
     wm_icon = ImageTk.PhotoImage(file=app_icon)
     wm_icon.image = app_icon
     root.tk.call('wm', 'iconphoto', root, wm_icon)
@@ -490,7 +490,7 @@ if __name__ == '__main__':
     style = w_ttkstyle.customise_ttk_widgets_style(s)
 
     app = App(root, cfe="thread", layout="horizontal")  # stable
-    app = App(root, cfe="process", layout="horizontal")  # hangs randomly after several reruns
+    # app = App(root, cfe="process", layout="horizontal")  # hangs randomly after several reruns
     app.grid(row=0, column=0, sticky="nsew")
     root.columnconfigure(0, weight=1)
     root.rowconfigure(0, weight=1)
