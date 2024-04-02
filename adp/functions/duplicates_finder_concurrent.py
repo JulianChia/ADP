@@ -11,30 +11,30 @@ __copyright__ = "Copyright 2023, Chia Yan Hon, Julian."
 __license__ = "Apache License, Version 2.0"
 
 
-def reshape_tuple1d(tuple1d, n):
-    """Function to reshape a 1D tuple into a 2D list with n number of
+def reshape_list1d(list1d: list, n: int) -> list:
+    """Function to reshape a 1D list into a 2D list with n number of
     sub-lists of elements."""
 
-    if len(tuple1d) < n:
+    if len(list1d) < n:
         raise ValueError(
-            'Size of tuple1d needs to be greater than or equal to n.')
+            'Size of list1d needs to be greater than or equal to n.')
 
-    sub_list_size = len(tuple1d) // n
-    remainder = len(tuple1d) % n
+    sub_list_size = len(list1d) // n
+    remainder = len(list1d) % n
     new_list = []
 
-    # How to handle elements of tuple1d that is divisible by n.
-    for i in range(0, len(tuple1d) - remainder, sub_list_size):
-        new_list.append(list(tuple1d[i: i + sub_list_size]))
+    # How to handle elements of list1d that is divisible by n.
+    for i in range(0, len(list1d) - remainder, sub_list_size):
+        new_list.append(list(list1d[i: i + sub_list_size]))
     # Insert each remainder elements into each sub_list of new_list.
     if remainder > 0:
-        for en, m in enumerate(tuple1d[-remainder:]):
+        for en, m in enumerate(list1d[-remainder:]):
             new_list[en].extend([m])
 
     return new_list
 
 
-def check_hash_duplication(batch, rasterimages):
+def check_hash_duplication(batch: list, rasterimages: list) -> dict:
     """Function to detect duplicated hash of raster images."""
     # print(f"check_hash_duplication {threading.main_thread()=}"
     #       f" {threading.current_thread()=}")
@@ -61,9 +61,9 @@ def check_hash_duplication(batch, rasterimages):
     return duplicates
 
 
-def detect_duplicates_concurrently(rasterimages,
+def detect_duplicates_concurrently(rasterimages: list,
                                    ncpu : int = os.cpu_count(),
-                                   cfe: str = "thread"):
+                                   cfe: str = "thread") -> dict:
     if cfe not in ["process", "thread"]:
         ValueError(f"cfe={cfe} is invalid. It's value must either be "
                    f"'process' or 'thread'.")
@@ -75,7 +75,7 @@ def detect_duplicates_concurrently(rasterimages,
             # print(f"- using concurrent.future.ThreadPoolExecutor")
             executor = cf.ThreadPoolExecutor
 
-    batches = reshape_tuple1d(rasterimages, ncpu)
+    batches = reshape_list1d(rasterimages, ncpu)
     futures = []
     print(f'Concurrent {cfe} scanning for duplicates has started...')
     with executor(max_workers=ncpu) as execu:
