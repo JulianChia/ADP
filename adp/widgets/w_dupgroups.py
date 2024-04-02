@@ -101,7 +101,7 @@ class DupGroup(ttk.Frame):
      """
 
     def __init__(self, master, g_iid: str, f_iids: list, f_paths: list,
-                 f_selected: list, with_image=True, thumbnailsize=(200, 200),
+                 f_selected: list, with_image=True, thumbnailsize=None,
                  **options):
         super().__init__(master, style='DupGroup.TFrame', **options)
         self.master = master
@@ -109,7 +109,7 @@ class DupGroup(ttk.Frame):
         self.f_iids = f_iids
         self.f_paths = f_paths
         self.f_selected = f_selected
-        self.thumbnailsize = thumbnailsize
+        self.thumbnailsize = thumbnailsize or (200, 200)
         self.total_size = self.get_total_size()
 
         self.infoframe = None  # A ttk.Frame widget
