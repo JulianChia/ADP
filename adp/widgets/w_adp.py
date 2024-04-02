@@ -308,24 +308,25 @@ class ADP(tk.Tk):
             raise ValueError(f"cfe={cfe} is invalid. It's value must either "
                              f"be 'thread' or 'process'.")
 
+        # 2. Show logo in terminal
         show_logo_in_terminal()
 
-        # 2. Initialise and set up Tk window
+        # 3. Initialise and set up Tk window
         super().__init__()
         self["background"] = BG
         self.title('ANY DUPLICATED PHOTOS?')
 
-        # 3. Sets the titlebar icon for the Tk window
-        app_icon = str(CWD) + "/icons/app/ADP.png"
+        # 4. Sets the titlebar icon for the Tk window
+        app_icon = str(CWD) + "/icons/app/ADP_icon_256.png"
         wm_icon = ImageTk.PhotoImage(file=app_icon)
         wm_icon.image = app_icon
         self.tk.call('wm', 'iconphoto', self, wm_icon)
 
-        # 4. Setup style of all ttk widgets
+        # 5. Setup style of all ttk widgets
         self.ss = ttk.Style()
         customise_ttk_widgets_style(self.ss)
 
-        # 5. Create the app widget
+        # 6. Create widget
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         match mode:
@@ -338,10 +339,10 @@ class ADP(tk.Tk):
                 self.app = ADPGallery(self, cfe=cfe, layout=layout)
         self.app.grid(row=0, column=0, sticky='nsew', padx=10, pady=(10, 0))
 
-        # 6. Setup self window's shutdown
+        # 7. Setup self window's shutdown
         self.protocol('WM_DELETE_WINDOW', self.exit)
 
-        # 7. Start main events loop
+        # 8. Start main events loop
         self.mainloop()
 
     def exit(self):
@@ -356,6 +357,7 @@ class ADP(tk.Tk):
 
 
 def show_logo_in_terminal():
+    print()
     print(
         f"        /AAAA           /DDDDDDDD       /PPPPPPPP   \n"
         f"      / AA _/AA        | DD     | DD   | PP_____/PP \n"
