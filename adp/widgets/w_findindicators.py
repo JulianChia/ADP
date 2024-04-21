@@ -1,5 +1,3 @@
-# print(f"{__name__}")
-
 # Python modules
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -455,14 +453,11 @@ class DonutCharts(tk.Canvas):
             self.resize()
 
     def resize(self):
-        self.update_idletasks()
         boundary = self.bbox(tk.ALL)
-        # print(f'{boundary=}')
         width = boundary[2]-boundary[0]
         height = boundary[3] - boundary[1]
         self['width'] = width
         self['height'] = height
-        self.update_idletasks()
 
 
 if __name__ == "__main__":

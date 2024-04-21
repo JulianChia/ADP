@@ -1,5 +1,3 @@
-# print(f"{__name__}")
-
 # Python modules
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -58,11 +56,18 @@ class ADPFind(ttk.Frame):
 
     def _create_widgets(self):
         self.find = Find(self, layout="vertical", cfe=self.cfe)
-        self.about = About(self, align="left", style="About.TFrame")
+        self.about = About(self, align="right", style="About.TFrame")
 
-        self.find.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 10))
-        self.about.grid(row=1, column=0, columnspan=2, sticky="nsew")
-        self.winfo_toplevel().minsize(width=420, height=480)
+        self.find.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 0))
+        self.about.place(in_=self, relx=1., rely=1., anchor="se")
+        self.winfo_toplevel().minsize(width=420, height=470)
+        self.winfo_toplevel().resizable(width=True, height=False)
+        self.find.bind("<Configure>", self._event_resize)
+
+    def _event_resize(self, event):
+        wh = f"{self.winfo_reqwidth() + 30}x470"
+        self.winfo_toplevel().geometry(wh)
+        self.update_idletasks()
 
     def exit(self):
         self.find.exit()
@@ -125,22 +130,18 @@ class ADPTable(ttk.Frame):
         self.table.set_sdir(self.find.selected_dir)
         self.table.set_sql3db(self.find.sqlite3_db)
 
-        if self.layout in "vertical":
-            align = "left"
-        elif self.layout in "horizontal":
-            align = "right"
-        self.about = About(self, align=align, style="About.TFrame")
+        self.about = About(self, align="right", style="About.TFrame")
 
         self.find.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 10))
         if self.layout in "vertical":
             self.table.grid(row=0, column=1, sticky="nsew", padx=(0, 5))
-            self.about.grid(row=1, column=0, columnspan=2, sticky="nsew")
+            self.about.grid(row=1, column=1, sticky="e")
             self.columnconfigure(1, weight=1)
             self.rowconfigure(0, weight=1)
             self.winfo_toplevel().minsize(width=800, height=500)
         elif self.layout in "horizontal":
             self.table.grid(row=1, column=0, sticky="nsew", padx=5)
-            self.about.grid(row=2, column=0, sticky="nse", padx=5)
+            self.about.grid(row=2, column=0, sticky="e", padx=5)
             self.columnconfigure(0, weight=1)
             self.rowconfigure(1, weight=1)
             self.winfo_toplevel().minsize(width=1200, height=600)
@@ -153,13 +154,11 @@ class ADPTable(ttk.Frame):
         self.table.bn_delete.bind("<<DeletionDone>>", self.event_recheck)
 
     def event_reset(self, event):
-        # print(f"\ndef event_reset(self, event):")
-        # 2. Reset Table
+        # 1. Reset Table
         if self.table.tree.get_children():
-            # print(f"Reset table")
             self.table.reset_table()
         self.table.set_tree_column0_heading_text(self.table.sdir.get())
-        # 1. Enable find button
+        # 2. Enable find button
         self.find.bn_find.instate(["disabled"], self.find.enable_find_button)
 
     def event_recheck(self, event):
@@ -188,10 +187,11 @@ class ADPGallery(ttk.Frame):
     Find: Let user choose a directory and searches it and its children
           directories for duplicated photos. Its search result is store in a
           sqlite3 database.
-    Gallery: - Display the search result from the Find widget in its Table
-               widget and in a scrollable Viewport.
-             - Allow selection and deselection of single or multiple photo file
-               item(s) and the deletion of these selected photos.
+    Gallery: - Display the search result from the Find widget in a text-based
+               scrollable ttk.Treeview widget.and pictorially in the
+               VerticalScrollFrame widget.
+             - Allow selection and deselection of single or multiple photos
+               and the deletion of these selected photos.
     About: Display the Copyright, License and sources code of this program.
     """
 
@@ -235,20 +235,15 @@ class ADPGallery(ttk.Frame):
         self.find.hide_selected_path()
 
         self.gallery = Gallery(self, orient=self.orient)
-        table = self.gallery.table
-        table.set_sdir(self.find.selected_dir)
-        table.set_sql3db(self.find.sqlite3_db)
+        self.gallery.set_sdir(self.find.selected_dir)
+        self.gallery.set_sql3db(self.find.sqlite3_db)
 
-        if self.layout in "vertical":
-            align = "left"
-        elif self.layout in "horizontal":
-            align = "right"
-        self.about = About(self, align=align, style="About.TFrame")
+        self.about = About(self, align="right", style="About.TFrame")
 
         self.find.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 10))
         if self.layout in "vertical":
             self.gallery.grid(row=0, column=1, sticky="nsew", padx=(0, 5))
-            self.about.grid(row=1, column=0, columnspan=2, sticky="nsew")
+            self.about.grid(row=1, column=1, sticky="e")
             self.columnconfigure(1, weight=1)
             self.rowconfigure(0, weight=1)
             self.winfo_toplevel().minsize(width=1000, height=600)
@@ -260,32 +255,30 @@ class ADPGallery(ttk.Frame):
             self.winfo_toplevel().minsize(width=1200, height=500)
 
     def _create_bindings(self):
-        find = self.find
-        table = self.gallery.table
+        self.find.unbind("<<DirectorySelected>>")
+        self.find.bind("<<DirectorySelected>>", self.event_reset_app)
+        self.find.bind("<<Sqlite3DBPopulated>>",
+                       self.gallery.event_populate_tree_the_first_time)
+        self.gallery.bn_delete.bind("<<DeletionDone>>",
+                                    self.event_recheck)
 
-        find.unbind("<<DirectorySelected>>")
-        find.bind("<<DirectorySelected>>", self.event_reset)
-        find.bind("<<Sqlite3DBPopulated>>",
-                  table.event_populate_tree_the_first_time)
-        table.bn_delete.bind("<<DeletionDone>>", self.event_recheck)
-
-    def event_reset(self, event):
-        # print(f"\ndef event_reset(self, event):")
-        # 2. Reset Table
-        table = self.gallery.table
-        if table.tree.get_children():
-            # print(f"Reset table")
-            table.reset_table()
-        self.after_idle(table.set_tree_column0_heading_text, table.sdir.get())
-        self.gallery.update_idletasks()
-        # 1. Enable find button
+    def event_reset_app(self, event):
+        # 1. Reset Gallery, i.e. Table and Viewport
+        gallery = self.gallery
+        if gallery.tree.get_children():
+            gallery.reset_table()
+            gallery.reset_viewport()
+            gallery._create_tree_bindings_part_2()
+        self.after_idle(gallery.set_tree_column0_heading_text,
+                        gallery.sdir.get())
+        self.update_idletasks()
+        # 2. Enable find button
         self.after_idle(self.find.enable_find_button)
 
     def event_recheck(self, event):
-        # print(f"\ndef event_recheck(self, event):")
         print(f"\nRecheck {self.find.selected_dir.get()}")
         self.find.reset()
-        self.event_reset(event)
+        self.event_reset_app(event)
         self.after_idle(self.find.bn_find.invoke)
 
     def exit(self):
@@ -317,7 +310,7 @@ class ADP(tk.Tk):
         self.title('ANY DUPLICATED PHOTOS?')
 
         # 4. Sets the titlebar icon for the Tk window
-        app_icon = str(CWD) + "/icons/app/ADP_icon_256.png"
+        app_icon = str(CWD) + "/icons/adp/ADP_icon_256.png"
         wm_icon = ImageTk.PhotoImage(file=app_icon)
         wm_icon.image = app_icon
         self.tk.call('wm', 'iconphoto', self, wm_icon)
@@ -354,6 +347,7 @@ class ADP(tk.Tk):
             print(f"\nExiting ADP...")
             self.app.exit()
             self.destroy()
+            self.quit()
 
 
 def show_logo_in_terminal():
@@ -405,7 +399,7 @@ def main():
                 lay = layouts[args.layout]
             except KeyError as exc:
                 if not exc.args[0]:
-                    lay = "vertical"
+                    lay = "horizontal"
                 else:
                     raise KeyError(exc.args[0])
             finally:
@@ -430,6 +424,8 @@ def main():
 ###############################################################################
 if __name__ == '__main__':
     # ADP(mode="find", cfe="process")  # stable
+    # ADP(mode="table", layout="horizontal", cfe="process")  # stable
     # ADP(mode="table", layout="vertical", cfe="process")  # stable
     # ADP(mode="gallery", layout="horizontal", cfe="process")  # unstable: hangs randomly after several reruns
     ADP(mode="gallery", layout="horizontal", cfe="thread")  # stable but slower than cfe="process"
+    # ADP(mode="gallery", layout="vertical", cfe="thread")  # stable but slower than cfe="process"

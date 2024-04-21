@@ -1,5 +1,3 @@
-# print(f"{__name__}")
-
 # Python modules
 import tkinter as tk
 import tkinter.font

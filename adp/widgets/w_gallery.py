@@ -1,5 +1,3 @@
-# print(f"{__name__}")
-
 # Python modules
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -13,7 +11,7 @@ from PIL import ImageTk
 
 # Project modules
 from adp.functions import timings
-from adp.widgets.constants import DFONT, BFONT, FG, BG, BG2, CWD
+from adp.widgets.constants import DFONT, BFONT, FG, BG, BG2, CWD, THUMBNAILSIZE
 from adp.widgets.w_table import Table
 from adp.widgets.w_scrframe import VerticalScrollFrame
 from adp.widgets.w_dupgroups import (DupGroup,
@@ -29,12 +27,10 @@ dfont = list(DFONT.values())
 bfont = list(BFONT.values())
 
 
-class Gallery(ttk.PanedWindow):
-    """A custom ttk.PanedWindow widget that consist of a custom Table widget
-    and a custom VerticalScrollFrame widget. The Table widget displays
-    information of some of the detected duplicated raster images in a treeview
-    format whereas the VerticalScrollFrame widget acts as a viewport to display
-    the same information in an organised thumbnail format.
+class Gallery(Table):
+    """A modified Table widget. It has an added pane that has a custom
+    VerticalScrollFrame widget to acts as a viewport to display the
+    information in self.tree in an organised thumbnail format.
 
     User Methods:
     .reset_viewport() - reset self.dupgroupsframe, self.dupgroups and
@@ -46,42 +42,38 @@ class Gallery(ttk.PanedWindow):
     """
 
     def __init__(self, master, **options):
-        try:
-            debug = options.pop("debug")
-        except KeyError:
-            self.debug = False
-        else:
-            if isinstance(debug, bool):
-                self.debug = debug
-            else:
-                raise TypeError
         super().__init__(master, **options)
-        self.master = master
-
         self._thumbnails_queue = queue.Queue()
         self.dupgroups = {}  # to contain all giids and their DupGroup instances
         self.dupgroupsframe = None  # widget: parent of all DupGroup instances
-        self.table = None  # widget: Table instance
         self.viewport = None  # widget: VerticalScrollFrame instance
+        self.after_id_dupgroups_paging = None
+        self.after_id_update_dupgroups_checkvalues = None
 
-        self._create_widget()
-        self._create_bindings()
+        self._create_viewport()
+        self._create_tree_bindings_part_2()
+        self._create_dupgroupframe()
+        self._create_dupgroupsframe_bindings()
+        self._create_vplabel()
 
-    def _create_widget(self):
-        self.table = Table(self, debug=self.debug)
-
+    def _create_viewport(self):
         self.viewport = VerticalScrollFrame(
-            self, background=BG2, troughcolor="grey", arrowcolor=FG,
-            mainborderwidth=1, interiorborderwidth=0, mainrelief='sunken',
-            interiorrelief='sunken')
+            self, background=BG2, cbackground=BG2, ibackground=BG2,
+            troughcolor="grey", arrowcolor=FG, mainborderwidth=1,
+            interiorborderwidth=0, mainrelief='sunken', interiorrelief='sunken')
         self.viewport.vscrollbar["style"] = "Vertical.TScrollbar"
         self.viewport.hscrollbar["style"] = "Horizontal.TScrollbar"
         self.viewport.interior.toggledcheckbutton = None
-
-        self.add(self.table)
         self.add(self.viewport)
+        self.bind("<Configure>", lambda _: self.update_idletasks())
 
-        self._create_dupgroupframe()
+    def _create_vplabel(self):
+        self.vplabel = ttk.Label(self, style="vp.TLabel", anchor="center",
+                                 text="Updating ....",
+                                 font=('URW Gothic L', 15, 'normal'))
+        self.vplabel.place(relx=0.5, rely=0.5, relwidth=1.0,  relheight=1.01,
+                           anchor='center', in_=self.viewport)
+        self.vplabel.lower(self.viewport)
 
     def _create_dupgroupframe(self):
         """This ttk.Frame is the primary container of all DupGroup widget
@@ -94,14 +86,13 @@ class Gallery(ttk.PanedWindow):
         self.dupgroupsframe.toggled_checkbutton = None
 
     def reset_viewport(self):
-        # print(f"\n{self=} def reset_viewport(self, event):")
-        # print(f"{self.viewport.interior.winfo_children()=}")
         if not self.dupgroups:
             return
 
         # 1. Destroy self.dupgroupsframe and recreate it.
         self.dupgroupsframe.destroy()
         self._create_dupgroupframe()
+        self._create_dupgroupsframe_bindings()
 
         # 2. Clear self.dupgroups
         self.dupgroups.clear()
@@ -109,32 +100,257 @@ class Gallery(ttk.PanedWindow):
         # 3. Reset viewport
         self.viewport.interior["width"] = 10
         self.viewport.interior["height"] = 10
-        self.viewport.update_idletasks()
+        self.update_idletasks()
         self.viewport.canvas.yview(tk.MOVETO, 0.0)
         self.viewport.interior.toggledcheckbutton = None
 
+    def _tree_show_next_next_page(self):
+        tree = self.tree
+        db = self.sql3db
+        ysb = self.ysb
+
+        # 1. Exit if tree is unpopulated
+        all_pages = db.get_all_page_numbers()
+        if not self.populated or not all_pages:
+            return None
+
+        # 2. Get visible giids and fiids
+        visible_giids = self.get_visible_group_iids()
+        visible_fiids = self.get_visible_file_iids()
+
+        # 3. Get coordinate of the scrollbar sash
+        _, ysb_btm = ysb.get()  # 0.0 to 1.0 values denote top to bottom
+
+        if len(all_pages) == 1:  # If only 1 page
+
+            if ysb_btm == 1.0 :  # A.1. At last page bottom
+                tree.event_generate("<<TreeEndReached>>", when="tail")
+            else:  # A.2 Not at last page bottom
+                # Generate virtual event to trigger a followup process to ensure
+                # the Dupgroup of the first visible group item of the Treeview
+                # is at the top of the self.viewport in the Gallery widget.
+                tree.event_generate("<<TreeScrollDownDone>>", when="tail")
+
+        else:  # If more than 1 page
+
+            if self.shown_pages[2] == all_pages[-1]:  # A. Next page is last page
+                if ysb_btm == 1.0:  # A.1. At last page bottom
+                    tree.event_generate("<<TreeEndReached>>", when="tail")
+                else:  # A.2 Not at last page bottom
+                    # Generate virtual event to trigger a followup process to ensure
+                    # the Dupgroup of the first visible group item of the Treeview
+                    # is at the top of the self.viewport in the Gallery widget.
+                    tree.event_generate("<<TreeScrollDownDone>>", when="tail")
+            else:  # B. Next page isn't last page
+                # B.1 Get File items id of next page
+                npage_fiids = []
+                for giid in self.shown_giids[2]:
+                    npage_fiids.extend(db.get_item_ids_of_group(giid))
+                # B.2 Determine whether any visible group and file items belongs
+                #     to the next page
+                vg_in_npage = any([giid in self.shown_giids[2] for giid in
+                                   visible_giids])
+                vf_in_npage = any([fiid in npage_fiids for fiid in visible_fiids])
+
+                # B.2.T Next page group and file items are visible.
+                if vg_in_npage and vf_in_npage:
+
+                    if not self.is_updating:
+                        self.is_updating = True
+                        self.disable_buttons()
+
+                        # B.2.T.1 Detach previous page items
+                        if self.shown_giids[0]:
+                            tree.detach(*self.shown_giids[0])
+
+                        # B.2.T.2 Create or reattach next next page group and
+                        #         file items
+                        nnpage = self.shown_pages[2] + 1
+                        nnpage_giids = db.get_group_ids_of_page(nnpage)
+                        if not set(nnpage_giids).issubset(set(self.populated_giids)):
+                            # Create next next page items
+                            self._populate_tree_page_from_sql3db(nnpage)
+                            evg = 0
+                        else:
+                            # Reattach next next page items
+                            for iid in nnpage_giids:
+                                tree.move(iid, "", 'end')  # reattach
+                            evg = 1
+
+                        # B.2.T.3 Update self.shown_pages
+                        self.shown_pages = [i+1 for i in self.shown_pages]
+
+                        # B.2.T.4 Update self.shown_giids
+                        self.shown_giids[0] = self.shown_giids[1]
+                        self.shown_giids[1] = self.shown_giids[2]
+                        self.shown_giids[2] = nnpage_giids
+
+                        # B.2.T.5 Ensure visible group and file items are still
+                        #         visible
+                        for vgiid in visible_giids:
+                            tree.see(vgiid)
+                        for vfiid in visible_fiids:
+                            tree.see(vfiid)
+
+                        # B.2.T.6 Generate virtual event
+                        # Generate virtual event to initiate followup process related to
+                        # creating or reattaching next page Dupgroups in self.viewport
+                        # in the Gallery widget.
+                        if evg == 0:
+                            tree.event_generate("<<TreePopulateNextNextPageDone>>",
+                                                when="tail")
+                        elif evg == 1:
+                            tree.event_generate("<<TreeReattachNextNextPageDone>>",
+                                                when="tail")
+
+                else:  # B.2.F Next page group and file items aren't visible.
+                    # Generate virtual event to trigger a followup process to ensure
+                    # the Dupgroup of the first visible group item of the Treeview
+                    # is at the top of the self.viewport in the Gallery widget.
+                    tree.event_generate("<<TreeScrollDownDone>>", when="tail")
+
+    def _tree_show_previous_previous_page(self):
+        tree = self.tree
+        db = self.sql3db
+        ysb = self.ysb
+
+        # 1. Exit if tree is unpopulated
+        all_pages = db.get_all_page_numbers()
+        if not self.populated or not all_pages:
+            return
+
+        # 2. Get visible giids and fiids
+        visible_giids = self.get_visible_group_iids()
+        visible_fiids = self.get_visible_file_iids()
+
+        # 3 Get coordinate of the scrollbar sash
+        ysb_top, _ = ysb.get()  # 0.0 to 1.0 values denote top to bottom
+
+        if len(all_pages) == 1:  # If only 1 page
+            if ysb_top == 0.0:  # A.1. At first page top
+                tree.event_generate("<<TreeStartReached>>", when="tail")
+            else:  # A.2 Not at first page top
+                # Generate virtual event to trigger a followup process to ensure
+                # the Dupgroup of the first visible group item of the Treeview
+                # is at the top of the self.viewport in the Gallery widget.
+                tree.event_generate("<<TreeScrollUpDone>>", when="tail")
+
+        else:
+            if self.shown_pages[0] == all_pages[0]:  # A. Previous page is first page
+                if ysb_top == 0.0:  # A.1. At first page top
+                    tree.event_generate("<<TreeStartReached>>", when="tail")
+                else:  # A.2 Not at first page top
+                    # Generate virtual event to trigger a followup process to ensure
+                    # the Dupgroup of the first visible group item of the Treeview
+                    # is at the top of the self.viewport in the Gallery widget.
+                    tree.event_generate("<<TreeScrollUpDone>>", when="tail")
+
+            else:  # B. Previous page isn't first page
+                # B.1 Get File items id of previous page
+                ppage_fiids = []  # previous page fiids
+                for giid in self.shown_giids[0]:
+                    ppage_fiids.extend(db.get_item_ids_of_group(giid))
+
+                # B.2 Determine whether any visible group and file items belongs
+                #     to the previous page
+                vg_in_ppage = any(
+                    [giid in self.shown_giids[0] for giid in visible_giids])
+                vf_in_ppage = any([fiid in ppage_fiids for fiid in visible_fiids])
+
+                # B.2.T Previous page group and file items are visible.
+                if vg_in_ppage and vf_in_ppage:
+
+                    if not self.is_updating:
+                        self.disable_buttons()
+                        self.is_updating = True
+
+                        # B.2.T.1 Detach next page items.
+                        if self.shown_giids[2]:
+                            tree.detach(*self.shown_giids[2])
+
+                        # B.2.T.2 Reattach previous previous page group and file
+                        #         items
+                        pppage = self.shown_pages[0] - 1
+                        pppage_giids = db.get_group_ids_of_page(pppage)
+                        if pppage_giids:
+                            for iid in pppage_giids[-1:None:-1]:  # in reverse order
+                                tree.move(iid, "", 0)  # reattach
+
+                        # B.2.T.3 Update self.shown_pages
+                        self.shown_pages = [i - 1 for i in self.shown_pages]
+
+                        # B.2.T.4 Update self.shown_giids
+                        self.shown_giids[2] = self.shown_giids[1]
+                        self.shown_giids[1] = self.shown_giids[0]
+                        self.shown_giids[0] = pppage_giids
+
+                        # B.2.T.5 Ensure visible group and file items are
+                        #         still visible"
+                        for vgiid in visible_giids[-1:None:-1]:  # in reverse order
+                            tree.see(vgiid)
+                        for vfiid in visible_fiids[-1:None:-1]:  # in reverse order
+                            tree.see(vfiid)
+
+                        # B.2.T.6 Generate virtual event
+                        # Generate virtual event to initiate followup process related to
+                        # reattaching previous page Dupgroups in self.viewport in the
+                        # Gallery widget.
+                        tree.event_generate(
+                            "<<TreeReattachPreviousPreviousPageDone>>",
+                            when="tail")
+
+                else:  # B.2.F Next page group and file items aren't visible.
+                    # Generate virtual event to trigger a followup process to ensure
+                    # the Dupgroup of the first visible group item of the Treeview
+                    # is at the top of the self.viewport in the Gallery widget.
+                    tree.event_generate("<<TreeScrollUpDone>>", when="tail")
+
+    def _dupgroups_page_forward(self):
+        # 1. Destroy previous-previous-page dupgroups
+        pppage = self.shown_pages[0] - 1
+        pppage_giids = self.sql3db.get_group_ids_of_page(pppage)
+        if pppage_giids:
+            self._destroy_dupgroups_for_giids(pppage_giids)
+
+        # 2. Create dupgroups of next page
+        npage_giids = self.shown_giids[2]
+        self._create_dupgroups_for_giids_with_thread_queue(npage_giids)
+        # Note: 1. Commands defined hereafter will start immediately after the
+        #          thread has started and can complete before the thread_queue
+        #          has completed.
+
+    def _dupgroups_page_backward(self):
+        # 1. Destroy next-next-page dupgroups
+        nnpage = self.shown_pages[2] + 1
+        nnpage_giids = self.sql3db.get_group_ids_of_page(nnpage)
+        if nnpage_giids:
+            self._destroy_dupgroups_for_giids(nnpage_giids)
+
+        # 2. Create dupgroups of previous page
+        ppage_giids = self.shown_giids[0]
+        self._create_dupgroups_for_giids_with_thread_queue(ppage_giids)
+        # Note: 1. Commands defined hereafter will start immediately after the
+        #          thread has started and can complete before or after the
+        #          thread_queue has completed.
+
     def _destroy_dupgroups_for_giids(self, giids: list[str]):
-        # print(f"_destroy_dupgroups_for_giids {giids}")
         for giid in giids:
             self.dupgroups[giid].destroy()
             del self.dupgroups[giid]
 
-    def _create_dupgroups_for_giids(self, g_iids: list[str]):
+    def _create_dupgroups_for_giids_with_thread_queue(self, g_iids: list[str]):
         """Method to create DupGroup instances inside of self.dupgroupsframe
         for a list of group item ids."""
-        # print(f"\ndef _create_dupgroups_for_giids(self, giids):")
+        # print(f"def _create_dupgroups_for_giids_with_thread_queue {len(g_iids)}"
+        #       f" {g_iids}")
         start0 = perf_counter()
         dgf = self.dupgroupsframe
-        db = self.table.sql3db
+        db = self.sql3db
 
-        # 2. Create the DupGroup widget for each giid
+        # 1. Create the DupGroup widget for each giid
         f_iids = [db.get_item_ids_of_group(giid) for giid in g_iids]
         f_paths = [db.get_full_paths_of_group(giid) for giid in g_iids]
         f_selected = [db.get_selected_of_group(giid) for giid in g_iids]
-        # print(f"{len(g_iids)=} {g_iids}")
-        # print(f"{len(f_iids)=} {f_iids}")
-        # print(f"{len(f_paths)=}")
-        # print(f"{len(f_selected)=} {f_selected}")
         for giid, fiids, fpaths, fselected in zip(g_iids, f_iids, f_paths,
                                                   f_selected):
             self.dupgroups[giid] = DupGroup(dgf, giid, fiids, fpaths, fselected,
@@ -143,20 +359,18 @@ class Gallery(ttk.PanedWindow):
                                             )
             row = int(giid[1:])
             self.dupgroups[giid].grid(row=row, column=0, sticky='nsew')
-            self.dupgroups[giid].update_idletasks()
-        # print(f"{len(self.dupgroups)=}")
 
-        # 3. Concurrently convert each photo duplicate to a thumbnail and
+        # 2. Concurrently convert each photo duplicate to a thumbnail and
         #    include into the respective Checkbutton in the DupGroup widgets.
         tthread = threading.Thread(
             target=get_thumbnails_concurrently_with_queue,
-            args=(g_iids, f_iids, f_paths, self._thumbnails_queue),
+            args=(g_iids, f_iids, f_paths, self._thumbnails_queue,
+                  THUMBNAILSIZE),
             name="thumbnailthread")
         tthread.start()
         self._check_thumbnails_queue(tthread, start0)
 
     def _check_thumbnails_queue(self, thread, start0):
-        # print(f"\ndef _check_thread(self, thread, start0):")
         duration = 1  # millisecond
         try:
             info = self._thumbnails_queue.get(block=False)
@@ -165,7 +379,6 @@ class Gallery(ttk.PanedWindow):
             self.after(duration,
                        lambda: self._check_thumbnails_queue(thread, start0))
         else:
-            # print(f"self._check_thread got, {info=}")
             # Extract info from queue
             match info[0]:
                 case "thumbnail":
@@ -174,163 +387,55 @@ class Gallery(ttk.PanedWindow):
                     dpgrps[giid].imf_thumbnails[fiid] = ImageTk.PhotoImage(img)
                     dpgrps[giid].imf_checkbuttons[fiid]["image"] = \
                         dpgrps[giid].imf_thumbnails[fiid]
+                    self.show_1st_visible_treeview_groupitem_in_viewport()
                     self.after(duration,
                                lambda: self._check_thumbnails_queue(thread,
                                                                     start0))
                 case "completed":
-                    # 3. Show the 1st DupGroup instance
-                    self.viewport.canvas.update_idletasks()
-                    self.viewport.canvas.yview(tk.MOVETO, 0.0)
-                    self.viewport.interior.update_idletasks()
                     end0 = perf_counter()
                     loadtime = end0 - start0
                     tl, tl_units = timings(loadtime)
                     print(f'New Dupgroups instances created in '
                           f'{tl:.6f} {tl_units}.')
-                    self.dupgroupsframe.event_generate("<<DupGroupsCreated>>",
-                                                       when="tail")
+                    self.show_1st_visible_treeview_groupitem_in_viewport()
+                    self.vplabel.lower(self.viewport)
+                    self.is_updating = False
+                    self.enable_buttons()
 
-    def _create_bindings(self):
-        table = self.table
-        tree = self.table.tree
-        # interior = self.viewport.interior
-
-        # 1. Create DupGroup instances in self.dupgroupframe for current and
-        #    next shpwn pages after self.table.tree is populated for the
-        #    first time.
-        tree.bind("<<TreePopulatedFirstTimeDone>>",
-                  self._event_create_dupgroups_of_shown_giids)
-
-        # 2. Reset self.viewport.interior after resetting self.table
-        table.bind("<<TableResetDone>>", self._event_reset_viewport)
-
-        # 3. Ensure Viewport 1st visible DupGroup instance correspond to the
-        #    1st visible group item in the Treeview.
-        tree.bind("<<TreeScrollUpDone>>",
-                  self._event_show_1st_visible_treeview_groupitem_in_viewport)
-        tree.bind("<<TreeScrollDownDone>>",
-                  self._event_show_1st_visible_treeview_groupitem_in_viewport)
-        tree.bind("<<TreeStartReached>>",
-                  self._event_show_1st_visible_treeview_groupitem_in_viewport)
-        tree.bind("<<TreeEndReached>>",
-                  self._event_show_1st_visible_treeview_groupitem_in_viewport)
-        self.dupgroupsframe.bind(
-            "<<DupGroupsCreated>>",
-            self._event_show_1st_visible_treeview_groupitem_in_viewport)
-
-        # 4. Create & delete dupgroups during page transitions
-        tree.bind("<<TreePopulateNextNextPageDone>>",
-                  self._event_dupgroups_page_forward)
-        tree.bind("<<TreeReattachNextNextPageDone>>",
-                  self._event_dupgroups_page_forward)
-        tree.bind("<<TreeReattachPreviousPreviousPageDone>>",
-                  self._event_dupgroups_page_backward)
-
-        # 5. Update the checkboxes of each DupGroup instance whenever one or
-        #    more Treeview item is/are toggled.
-        tree.bind("<<TreeFileItemsToggled>>",
-                  self._event_update_dupgroups_checkvalues)
-
-        # 6. Ensure that clicked file item in the treeview (i.e.self.table.tree)
-        #    moves the corresponding DupGroup instance to the top of the
-        #    viewport.
-        tree.bind("<<MoveDupGroupToTop>>",
-                  self._event_move_dupgroup_to_top_of_viewport)
-
-        # 7. Update the tags of the file item in the Treeview corresponding to
-        #    the toggled Checkbutton and ensure the group item and all its
-        #    file items are visible in the Treeview.
-        self.dupgroupsframe.bind("<<CheckbuttonToggled>>",
-                                 self._event_toggle_tree_file_item_appearance)
-
-    def _event_create_dupgroups_of_shown_giids(self, event):
-        # print(f"\ndef _event_create_dupgroups_of_shown_giids(self, event):")
-        giids = [giid for giids in self.table.shown_giids for giid in giids]
-        self._create_dupgroups_for_giids(giids)
-
-    def _event_reset_viewport(self, event):
-        self.reset_viewport()
-        self._create_bindings()
-
-    def _event_show_1st_visible_treeview_groupitem_in_viewport(self, event):
-        """Event handler to ensure the Viewport 1st visible DupGroup
-        instance correspond to the 1st visible group item in the Treeview.
+    def show_1st_visible_treeview_groupitem_in_viewport(self):
+        """Method to ensure the Viewport 1st visible DupGroup instance
+        correspond to the 1st visible group item in the Treeview.
         """
-        # print(f"\ndef _event_show_1st_visible_treeview_groupitem_in_viewport("
-        #       f"self, event)")
-        vgiids = self.table.get_visible_group_iids()
-        # print(f"{vgiids=}")
-        # print(f"{self.dupgroups.keys()=}")
-        self.viewport.update_idletasks()
+        vgiids = self.get_visible_group_iids()
+        self.update_idletasks()
         first_tn_y = self.dupgroups[vgiids[0]].winfo_y()
         tnf_height = self.viewport.interior.winfo_reqheight()
-        # print(f"{first_tn_y/tnf_height=}")
         self.viewport.canvas.yview_moveto(first_tn_y / tnf_height)
 
-    def _event_dupgroups_page_forward(self, event):
-        # print(f"\ndef _event_dupgroups_page_forward(self, event):")
-        # for n, giids in enumerate(self.table.shown_giids):
-        #     print(n, giids)
-        # 1. Destroy previous previous page
-        pppage = self.table.shown_pages[0] - 1
-        # print(f"{pppage=}")
-        pppage_giids = self.table.sql3db.get_group_ids_of_page(pppage)
-        # print(f"{pppage_giids=}")
-        if pppage_giids:
-            self._destroy_dupgroups_for_giids(pppage_giids)
-        # 2. Create next page
-        nnpage_giids = self.table.shown_giids[2]
-        self._create_dupgroups_for_giids(nnpage_giids)
-
-    def _event_dupgroups_page_backward(self, event):
-        # print(f"\ndef _event_dupgroups_page_backward(self, event):")
-        # for n, giids in enumerate(self.table.shown_giids):
-        #     print(n, giids)
-        # 1. Destroy next next page
-        nnpage = self.table.shown_pages[2] + 1
-        # print(f"{nnpage=}")
-        nnpage_giids = self.table.sql3db.get_group_ids_of_page(nnpage)
-        # print(f"{nnpage_giids=}")
-        if nnpage_giids:
-            self._destroy_dupgroups_for_giids(nnpage_giids[-1:None:-1])
-        # 2. Recreate new previous page
-        pppage_giids = self.table.shown_giids[0]
-        self._create_dupgroups_for_giids(pppage_giids[-1:None:-1])
-
-    def _event_update_dupgroups_checkvalues(self, event):
+    def _update_dupgroups_checkvalues(self):
         """Event handler to update the checkbox of every Checkbutton of every
          DupGroup instances."""
-        # print(f"\ndef _event_update_dupgroups_checkvalues(self):")
-        db = self.table.sql3db
-
+        db = self.sql3db
         # 1. Get selected and unselected fiids from sql
         sel_fiids = list(db.get_selected().keys())
         unsel_fiids = list(db.get_selected(value=False).keys())
-        # print(f"{len(sel_fiids)} {sel_fiids=}")
-        # print(f"{len(unsel_fiids)} {unsel_fiids=}")
 
         # 2. Get their corresponding unique giids
         unique_sel_giids = set([i[:i.index("_")] for i in sel_fiids])
         unique_unsel_giids = set([i[:i.index("_")] for i in unsel_fiids])
-        # print(f"{len(unique_sel_giids)} {unique_sel_giids=}")
-        # print(f"{len(unique_unsel_giids)} {unique_unsel_giids=}")
 
         # 3. Extract those giids that were ever populated in the treeview
-        shown_giids = [giid for giids in self.table.shown_giids for giid in
+        shown_giids = [giid for giids in self.shown_giids for giid in
                        giids]
         shown_giids_sel = unique_sel_giids.intersection(set(shown_giids))
         shown_giids_unsel = \
             unique_unsel_giids.intersection(set(shown_giids))
-        # print(f"{len(shown_giids_sel)} {shown_giids_sel=}")
-        # print(f"{len(shown_giids_unsel)} {shown_giids_unsel=}")
 
         # 4. Extract those fiids that were ever populated in the treeview
         shown_fiids_sel = [i for i in sel_fiids if i[:i.index("_")] in
                            shown_giids_sel]
         shown_fiids_unsel = [i for i in unsel_fiids if i[:i.index("_")] in
                              shown_giids_unsel]
-        # print(f"{len(shown_fiids_sel)} {shown_fiids_sel=}")
-        # print(f"{len(shown_fiids_unsel)} {shown_fiids_unsel=}")
 
         # 5. Update the checkvalues of each CheckButton (cb) in all Dupgroup
         #    instances (regardless of whether they are visible or hidden).
@@ -343,43 +448,123 @@ class Gallery(ttk.PanedWindow):
             giid = fiid[:fiid.index("_")]
             self.dupgroups[giid].imf_checkvalues[fiid].set(False)
 
+    def _create_tree_bindings_part_2(self) -> None:
+        tree = self.tree
+        # 1. Create DupGroup instances in self.dupgroupframe for shown giids
+        #    after self.tree is populated for the first time.
+        tree.bind("<<TreePopulateDone>>", self._event_populate_viewport)
+
+        # 2. Ensure Viewport 1st visible DupGroup instance correspond to the
+        #    1st visible group item in the Treeview.
+        tree.bind("<<TreeScrollUpDone>>",
+                  self._event_show_1st_visible_treeview_groupitem_in_viewport)
+        tree.bind("<<TreeScrollDownDone>>",
+                  self._event_show_1st_visible_treeview_groupitem_in_viewport)
+        tree.bind("<<TreeStartReached>>",
+                  self._event_show_1st_visible_treeview_groupitem_in_viewport)
+        tree.bind("<<TreeEndReached>>",
+                  self._event_show_1st_visible_treeview_groupitem_in_viewport)
+
+        # 3. Create & delete dupgroups during page transitions
+        tree.bind("<<TreePopulateNextNextPageDone>>",
+                  self._event_dupgroups_page_forward)
+        tree.bind("<<TreeReattachNextNextPageDone>>",
+                  self._event_dupgroups_page_forward)
+        tree.bind("<<TreeReattachPreviousPreviousPageDone>>",
+                  self._event_dupgroups_page_backward)
+
+        # 4. Update the checkboxes of each DupGroup instance whenever one or
+        #    more Treeview item is/are toggled.
+        tree.bind("<<TreeFileItemsToggled>>",
+                  self._event_update_dupgroups_checkvalues)
+
+        # 5. Ensure that clicked file item in the treeview (i.e.self.tree)
+        #    moves the corresponding DupGroup instance to the top of the
+        #    viewport.
+        tree.bind("<<MoveDupGroupToTop>>",
+                  self._event_move_dupgroup_to_top_of_viewport)
+
+    def _create_dupgroupsframe_bindings(self):
+        # 1. Update the tags of the file item in the Treeview corresponding to
+        #    the toggled Checkbutton and ensure the group item and all its
+        #    file items are visible in the Treeview.
+        self.dupgroupsframe.bind("<<CheckbuttonToggled>>",
+                                 self._event_toggle_tree_file_item_appearance)
+        self.dupgroupsframe.bind('<Configure>',
+                                 lambda event: self.update_idletasks())
+
+    def _event_populate_viewport(self, event):
+        self.vplabel.lift(self.viewport)
+
+        def do_task():
+            giids = [giid for giids in self.shown_giids for giid in giids]
+            self._create_dupgroups_for_giids_with_thread_queue(giids)
+
+        self.after(200,  do_task)
+
+    def _event_reset_viewport(self, event):
+        self.reset_viewport()
+
+    def _event_show_1st_visible_treeview_groupitem_in_viewport(self, event):
+        self.show_1st_visible_treeview_groupitem_in_viewport()
+
+    def _event_dupgroups_page_forward(self, event):
+        self.vplabel.lift(self.viewport)
+
+        if self.after_id_dupgroups_paging:
+            self.after_cancel(self.after_id_dupgroups_paging)
+        self.after_id_dupgroups_paging = \
+            self.after(100, self._dupgroups_page_forward)
+
+    def _event_dupgroups_page_backward(self, event):
+        self.vplabel.lift(self.viewport)
+
+        if self.after_id_dupgroups_paging:
+            self.after_cancel(self.after_id_dupgroups_paging)
+        self.after_id_dupgroups_paging = \
+            self.after(100, self._dupgroups_page_backward)
+
+    def _event_update_dupgroups_checkvalues(self, event):
+        if self.is_updating:
+            if self.after_id_update_dupgroups_checkvalues:
+                self.after_cancel(self.after_id_update_dupgroups_checkvalues)
+            self.after_id_update_dupgroups_checkvalues = \
+                self.after(20, self._update_dupgroups_checkvalues)
+        else:
+            self._update_dupgroups_checkvalues()
+
     def _event_move_dupgroup_to_top_of_viewport(self, event):
         """Event handler to ensure the Viewport 1st visible DupGroup instance
          correspond to the group of the clicked file item in the Treeview."""
-        # print(f"\ndef _event_move_dupgroup_to_top_of_viewport(self, event):")
-        fiid = self.table.clicked_f_items[0]
-        giid = self.table.sql3db.get_group_id_of_item(fiid)
+        fiid = self.clicked_f_items[0]
+        giid = self.sql3db.get_group_id_of_item(fiid)
         dg_y = self.dupgroups[giid].winfo_y()
         dgf_height = self.viewport.interior.winfo_reqheight()
-        # print(f"{giid=}")
-        # print(f"{dg_y/dgf_height=}")
         self.viewport.canvas.yview_moveto(dg_y / dgf_height)
 
     def _event_toggle_tree_file_item_appearance(self, event):
-        # print(f"\ndef _toggle_tree_file_item_appearance(self, event):")
-        table = self.table
-        db = self.table.sql3db
+        tree = self.tree
+        db = self.sql3db
 
         # 1. Get fiid of clicked Checkbutton
         fiid = event.widget.toggledcheckbutton.cget('text')
-        # print(f"{type(fiid)=} {fiid=}")
 
         # 2. Toggle the fiid's selected value in the sql_database
         db.toggle_selected_of_item(fiid)
 
         # 3. Update the fiid's appearance/tags in the Treeview
-        table.update_file_item_tags(fiid)
+        self.update_tree_file_item_tags(fiid)
 
         # 4. Ensure all file items similar to fiid and their group item are
         #    visible in the Treeview.
         giid = db.get_group_id_of_item(fiid)
         fiids = db.get_item_ids_of_group(giid)
         for iid in fiids[-1::-1]:
-            table.tree.see(iid)
-        table.tree.see(giid)
+            tree.see(iid)
+        tree.see(giid)
 
         # 5. Update the state of delete button in self.table
-        table.update_bn_delete_state()
+        self.update_bn_delete_state()
 
 
 class App(ttk.Frame):
@@ -421,9 +606,8 @@ class App(ttk.Frame):
         self.find.hide_selected_path()
 
         self.gallery = Gallery(self, orient=self.orient)
-        table = self.gallery.table
-        table.set_sdir(self.find.selected_dir)
-        table.set_sql3db(self.find.sqlite3_db)
+        self.gallery.set_sdir(self.find.selected_dir)
+        self.gallery.set_sql3db(self.find.sqlite3_db)
 
         self.find.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         if self.layout in "vertical":
@@ -442,26 +626,25 @@ class App(ttk.Frame):
         self.find.unbind("<<DirectorySelected>>")
         self.find.bind("<<DirectorySelected>>", self.event_reset_app)
         self.find.bind("<<Sqlite3DBPopulated>>",
-                       self.gallery.table.event_populate_tree_the_first_time)
-        self.gallery.table.bn_delete.bind("<<DeletionDone>>",
+                       self.gallery.event_populate_tree_the_first_time)
+        self.gallery.bn_delete.bind("<<DeletionDone>>",
                                           self.event_recheck)
 
     def event_reset_app(self, event):
-        # print(f"\ndef reset_app(self, event):")
-        # 2. Reset Table
-        table = self.gallery.table
-        if table.tree.get_children():
-            # print(f"Reset table")
-            table.reset_table()
-        self.after_idle(table.set_tree_column0_heading_text, table.sdir.get())
-        self.gallery.update_idletasks()
-        # 1. Enable find button
-        # self.after_idle(self.find.bn_find.instate, ["disabled"],
-        #                 self.find.enable_find_button)
+        # 1. Reset Gallery, i.e. Table and Viewport
+        gallery = self.gallery
+        if gallery.tree.get_children():
+            gallery.reset_table()
+            gallery.reset_viewport()
+            gallery._create_tree_bindings_part_2()
+        self.after_idle(gallery.set_tree_column0_heading_text,
+                        gallery.sdir.get())
+        self.update_idletasks()
+        # 2. Enable find button
         self.after_idle(self.find.enable_find_button)
 
+
     def event_recheck(self, event):
-        # print(f"\ndef event_recheck(self, event):")
         print(f"\nRecheck {self.find.selected_dir.get()}")
         self.find.reset()
         self.event_reset_app(event)
@@ -481,7 +664,7 @@ if __name__ == '__main__':
     root.geometry('1300x600')
 
     # Commands to create icon
-    app_icon = str(CWD) + "/icons/app/ADP_icon_256.png"
+    app_icon = str(CWD) + "/icons/adp/ADP_icon_256.png"
     wm_icon = ImageTk.PhotoImage(file=app_icon)
     wm_icon.image = app_icon
     root.tk.call('wm', 'iconphoto', root, wm_icon)
@@ -489,6 +672,7 @@ if __name__ == '__main__':
     s = ttk.Style()
     style = w_ttkstyle.customise_ttk_widgets_style(s)
 
+    # app = App(root, cfe="thread", layout="vertical")  # stable
     app = App(root, cfe="thread", layout="horizontal")  # stable
     # app = App(root, cfe="process", layout="horizontal")  # hangs randomly after several reruns
     app.grid(row=0, column=0, sticky="nsew")
@@ -505,6 +689,7 @@ if __name__ == '__main__':
             print(f"\nExiting Application...")
             app.exit()
             root.destroy()
+            root.quit()
 
 
     # Setup root window's shutdown and start it's main events loop

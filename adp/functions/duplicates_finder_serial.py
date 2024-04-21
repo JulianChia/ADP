@@ -1,5 +1,3 @@
-# print(f"{__name__}")
-
 # Python module
 from itertools import combinations
 

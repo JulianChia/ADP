@@ -55,19 +55,35 @@ def get_thumbnail_c(giid: str, fiid: str, fpath: str, psize=(200, 200)):
     # expense of quality.
     return giid, fiid, img
 
+# def get_thumbnails_concurrently_with_queue(
+#         g_iids: list, f_iids: list, f_paths:list, rqueue: queue.Queue):
+#
+#     def load_results_to_tqueue(future):
+#         # print(f"def load_results_to_tqueue(future):")
+#         # print(f"{threading.main_thread()=} {threading.current_thread()=}")
+#         rqueue.put(("thumbnail", future.result()))
+#         futures.remove(future)
+#         if not futures:
+#             # print(f'get_thumbnails_concurrently has completed!')
+#             rqueue.put(("completed", ()))
+#
+#     size = (200, 200)
+#     futures = []
+#     job_fn = get_thumbnail_c
+#     # print(f"{threading.main_thread()=} {threading.current_thread()=}")
+#     # print(f'get_thumbnails_concurrently has started...')
+#     # with cf.ProcessPoolExecutor() as vp_executor:
+#     with cf.ThreadPoolExecutor() as vp_executor:
+#         for giid, fiids, fpaths in zip(g_iids, f_iids, f_paths):
+#             for gg, ff, pp in zip(repeat(giid, len(fiids)), fiids, fpaths):
+#                 job_args = gg, ff, pp, size
+#                 futures.append(vp_executor.submit(job_fn, *job_args))
+#                 futures[-1].add_done_callback(load_results_to_tqueue)
+
+
 def get_thumbnails_concurrently_with_queue(
-        g_iids: list, f_iids: list, f_paths:list, rqueue: queue.Queue):
-
-    def load_results_to_tqueue(future):
-        # print(f"def load_results_to_tqueue(future):")
-        # print(f"{threading.main_thread()=} {threading.current_thread()=}")
-        rqueue.put(("thumbnail", future.result()))
-        futures.remove(future)
-        if not futures:
-            # print(f'get_thumbnails_concurrently has completed!')
-            rqueue.put(("completed", ()))
-
-    size = (200, 200)
+        g_iids: list, f_iids: list, f_paths:list, rqueue: queue.Queue,
+        size: tuple):
     futures = []
     job_fn = get_thumbnail_c
     # print(f"{threading.main_thread()=} {threading.current_thread()=}")
@@ -78,7 +94,12 @@ def get_thumbnails_concurrently_with_queue(
             for gg, ff, pp in zip(repeat(giid, len(fiids)), fiids, fpaths):
                 job_args = gg, ff, pp, size
                 futures.append(vp_executor.submit(job_fn, *job_args))
-                futures[-1].add_done_callback(load_results_to_tqueue)
+    for future in cf.as_completed(futures):
+        rqueue.put(("thumbnail", future.result()))
+        futures.remove(future)
+        if not futures:
+            # print(f'get_thumbnails_concurrently has completed!')
+            rqueue.put(("completed", ()))
 
 
 class DupGroup(ttk.Frame):
@@ -101,15 +122,13 @@ class DupGroup(ttk.Frame):
      """
 
     def __init__(self, master, g_iid: str, f_iids: list, f_paths: list,
-                 f_selected: list, with_image=True, thumbnailsize=None,
-                 **options):
+                 f_selected: list, with_image=True, **options):
         super().__init__(master, style='DupGroup.TFrame', **options)
         self.master = master
         self.g_iid = g_iid
         self.f_iids = f_iids
         self.f_paths = f_paths
         self.f_selected = f_selected
-        self.thumbnailsize = thumbnailsize or (200, 200)
         self.total_size = self.get_total_size()
 
         self.infoframe = None  # A ttk.Frame widget
@@ -130,6 +149,7 @@ class DupGroup(ttk.Frame):
             self._create_checkbuttons(with_image=False)
         self._create_stats()
         self._update_stats()
+        self.bind("<Configure>", lambda _: self.update_idletasks())
 
     def _create_widgets_inside_self(self):
         self.imagesframe = ttk.Frame(self, style='infoframe.TFrame',
@@ -230,209 +250,36 @@ class DupGroup(ttk.Frame):
 
 
 if __name__ == '__main__':
-    # from widgets.constants import *
-    # gg_iids = ['G0', 'G1', 'G2', 'G2', 'G3', 'G4', 'G5']
-    # ff_iids = [['G0_F0', 'G0_F1'], ['G1_F0', 'G1_F1'],
-    #            ['G2_F0', 'G2_F1'], ['G3_F0', 'G3_F1'],
-    #            ['G4_F0', 'G4_F1'], ['G5_F0', 'G5_F1']]
-    # vvsiids = ['G0_F1', 'G1_F1', 'G2_F1', 'G2_F2', 'G3_F1', 'G3_F2', 'G4_F1',
-    #            'G5_F1']
-    # pdir = str(CWD)
-    # ff_paths = [
-    #         [pdir + '/Samples/Photos3/Wallpapers_Grub2_old'
-    #                 '/BootScreen_EliotTesla.png',
-    #          pdir + '/Samples/Photos3/Wallpapers_Grub2/'
-    #                 'BootScreen_EliotTesla.png'],
-    #         [pdir + '/Samples/Photos3/Wallpapers_Grub2_old/fNuD4F.jpg',
-    #          pdir + '/Samples/Photos3/Wallpapers_Grub2/fNuD4F.jpg'],
-    #         [pdir + '/Samples/Photos3/Wallpapers_Grub2_old'
-    #                 '/PowerButton1920x1080.jpg',
-    #          pdir + '/Samples/Photos3/Wallpapers_Grub2/PowerButton1920x1080'
-    #                 '.jpg'],
-    #         [pdir + '/Samples/Photos3/Wallpapers_Grub2_old/Sierra2.png',
-    #          pdir + '/Samples/Photos3/Wallpapers_Grub2/Sierra2.png'],
-    #         [pdir + '/Samples/Photos3/Wallpapers_Grub2_old'
-    #                 '/wp2958180_1920x1080.png',
-    #          pdir + '/Samples/Photos3/Wallpapers_Grub2/wp2958180_1920x1080'
-    #                 '.png'],
-    #         [pdir + '/Samples/Photos3/Wallpapers_Grub2_old/wp2958180-worship'
-    #                 '-wallpaper.jpg',
-    #          pdir + '/Samples/Photos3/Wallpapers_Grub2/wp2958180-worship'
-    #                 '-wallpaper.jpg']
-    #     ]
-
-    gg_iids = [
-        'G0', 'G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10',
-        'G11', 'G12', 'G13', 'G14', 'G15', 'G16', 'G17', 'G18', 'G19', 'G20',
-        'G21', 'G22', 'G23', 'G24', 'G25', 'G26', 'G27', 'G28', 'G29'
-    ]
-    ff_iids = [
-        ('G0_F0', 'G0_F1'), ('G1_F0', 'G1_F1'),
-        ('G2_F0', 'G2_F1', 'G2_F2', 'G2_F3'),
-        ('G3_F0', 'G3_F1', 'G3_F2', 'G3_F3'),
-        ('G4_F0', 'G4_F1', 'G4_F2', 'G4_F3', 'G4_F4', 'G4_F5'),
-        ('G5_F0', 'G5_F1', 'G5_F2', 'G5_F3', 'G5_F4', 'G5_F5'),
-        ('G6_F0', 'G6_F1'), ('G7_F0', 'G7_F1'), ('G8_F0', 'G8_F1'),
-        ('G9_F0', 'G9_F1'), ('G10_F0', 'G10_F1'), ('G11_F0', 'G11_F1'),
-        ('G12_F0', 'G12_F1'), ('G13_F0', 'G13_F1'), ('G14_F0', 'G14_F1'),
-        ('G15_F0', 'G15_F1'), ('G16_F0', 'G16_F1'), ('G17_F0', 'G17_F1'),
-        ('G18_F0', 'G18_F1'), ('G19_F0', 'G19_F1'), ('G20_F0', 'G20_F1'),
-        ('G21_F0', 'G21_F1'), ('G22_F0', 'G22_F1'), ('G23_F0', 'G23_F1'),
-        ('G24_F0', 'G24_F1'), ('G25_F0', 'G25_F1'), ('G26_F0', 'G26_F1'),
-        ('G27_F0', 'G27_F1'), ('G28_F0', 'G28_F1'), ('G29_F0', 'G29_F1')
-    ]
-    source = '/home/master/Coding/PycharmProjects/ADP/Samples/Photos4'
-    ff_paths = [
-        [
-            source + '/Wallpapers_old/Apartments/pebbles-apartments-nice-living-area-p.webp',
-            source + '/Wallpapers/Apartments/pebbles-apartments-nice-living-area-p.webp'],
-        [
-            source + '/Wallpapers_old/Apartments/maxresdefault.jpg',
-            source + '/Wallpapers/Apartments/maxresdefault.jpg'],
-        [
-            source + '/Wallpapers_old/Apartments/Clean-Apartment-Interior-Design.jpeg',
-            source + '/Wallpapers_old/Apartments/Clean-Apartment-Interior-Design-2.jpeg',
-            source + '/Wallpapers/Apartments/Clean-Apartment-Interior-Design.jpeg',
-            source + '/Wallpapers/Apartments/Clean-Apartment-Interior-Design-2.jpeg'],
-        [
-            source + '/Wallpapers_old/demo/Milaidhoo-Island-Maldives-Beach-Bedroom-Feat.jpg',
-            source + '/Wallpapers_old/Milaidhoo-Island-Maldives-Beach-Bedroom-Feat.jpg',
-            source + '/Wallpapers/demo/Milaidhoo-Island-Maldives-Beach-Bedroom-Feat.jpg',
-            source + '/Wallpapers/Milaidhoo-Island-Maldives-Beach-Bedroom-Feat.jpg'],
-        [
-            source + '/Wallpapers_old/demo/copy.jpg',
-            source + '/Wallpapers_old/demo/dog-1920x1080-puppy-white-animal-pet-beach-sand-sea-1611.jpg',
-            source + '/Wallpapers_old/dog-1920x1080-puppy-white-animal-pet-beach-sand-sea-1611.jpg',
-            source + '/Wallpapers/demo/copy.jpg',
-            source + '/Wallpapers/demo/dog-1920x1080-puppy-white-animal-pet-beach-sand-sea-1611.jpg',
-            source + '/Wallpapers/dog-1920x1080-puppy-white-animal-pet-beach-sand-sea-1611.jpg'],
-        [
-            source + '/Wallpapers_old/demo/Sierra2.jpg',
-            source + '/Wallpapers_old/HighSierra-wallpapers/Sierra 2.jpg',
-            source + '/Wallpapers_old/Sierra2.jpg',
-            source + '/Wallpapers/demo/Sierra2.jpg',
-            source + '/Wallpapers/HighSierra-wallpapers/Sierra 2.jpg',
-            source + '/Wallpapers/Sierra2.jpg'],
-        [
-            source + '/Wallpapers_old/Screenshot from 2020-09-04 14-02-37.png',
-            source + '/Wallpapers/Screenshot from 2020-09-04 14-02-37.png'],
-        [
-            source + '/Wallpapers_old/Zoom/room.jpg',
-            source + '/Wallpapers/Zoom/room.jpg'],
-        [
-            source + '/Wallpapers_old/Apartments/MPM94144.jpg',
-            source + '/Wallpapers/Apartments/MPM94144.jpg'],
-        [
-            source + '/Wallpapers_old/Apartments/98758711.jpg',
-            source + '/Wallpapers/Apartments/98758711.jpg'],
-        [
-            source + '/Wallpapers_old/Screenshot from 2020-09-04 14-02-03.png',
-            source + '/Wallpapers/Screenshot from 2020-09-04 14-02-03.png'],
-        [
-            source + '/Wallpapers_old/HighSierra-wallpapers/High Sierra.jpg',
-            source + '/Wallpapers/HighSierra-wallpapers/High Sierra.jpg'],
-        [
-            source + '/Wallpapers_old/HighSierra-wallpapers/Sierra.jpg',
-            source + '/Wallpapers/HighSierra-wallpapers/Sierra.jpg'],
-        [
-            source + '/Wallpapers_old/pexels-eberhard-grossgasteiger-443446.jpg',
-            source + '/Wallpapers/pexels-eberhard-grossgasteiger-443446.jpg'],
-        [
-            source + '/Wallpapers_old/Screenshot from 2020-09-04 14-01-42.png',
-            source + '/Wallpapers/Screenshot from 2020-09-04 14-01-42.png'],
-        [
-            source + '/Wallpapers_old/Wavesurfer.png',
-            source + '/Wallpapers/Wavesurfer.png'],
-        [
-            source + '/Wallpapers_old/pexels-scott-webb-1931143.jpg',
-            source + '/Wallpapers/pexels-scott-webb-1931143.jpg'],
-        [
-            source + '/Wallpapers_old/pexels-zaksheuskaya-1616403.jpg',
-            source + '/Wallpapers/pexels-zaksheuskaya-1616403.jpg'],
-        [
-            source + '/Wallpapers_old/ElizabethandTeam.JPG',
-            source + '/Wallpapers/ElizabethandTeam.JPG'],
-        [
-            source + '/Wallpapers_old/Screenshot from 2020-09-04 14-01-33.png',
-            source + '/Wallpapers/Screenshot from 2020-09-04 14-01-33.png'],
-        [
-            source + '/Wallpapers_old/dmb_Gollinger_Wasserfall_Austria.jpg',
-            source + '/Wallpapers/dmb_Gollinger_Wasserfall_Austria.jpg'],
-        [
-            source + '/Wallpapers_old/dmb_vandusenbotanicalgarden.jpg',
-            source + '/Wallpapers/dmb_vandusenbotanicalgarden.jpg'],
-        [
-            source + '/Wallpapers_old/Mountains_Sunset.jpg',
-            source + '/Wallpapers/Mountains_Sunset.jpg'],
-        [
-            source + '/Wallpapers_old/green_dears_forest.jpg',
-            source + '/Wallpapers/green_dears_forest.jpg'],
-        [
-            source + '/Wallpapers_old/pexels-pixabay-459203.jpg',
-            source + '/Wallpapers/pexels-pixabay-459203.jpg'],
-        [
-            source + '/Wallpapers_old/pexels-mia-von-steinkirch-3894157.jpg',
-            source + '/Wallpapers/pexels-mia-von-steinkirch-3894157.jpg'],
-        [
-            source + '/Wallpapers_old/pexels-tara-winstead-7723324.jpg',
-            source + '/Wallpapers/pexels-tara-winstead-7723324.jpg'],
-        [
-            source + '/Wallpapers_old/pexels-luis-del-río-15286.jpg',
-            source + '/Wallpapers/pexels-luis-del-río-15286.jpg'],
-        [
-            source + '/Wallpapers_old/tree.jpg',
-            source + '/Wallpapers/tree.jpg'],
-        [
-            source + '/Wallpapers_old/dmb_pexels-pixabay-358482.jpg',
-            source + '/Wallpapers/dmb_pexels-pixabay-358482.jpg']
-    ]
-
-    ff_selected = [
-        (1, 0), (1, 0), (1, 0, 0, 0), (1, 0, 0, 0), (1, 0, 0, 0, 0, 0),
-        (1, 0, 0, 0, 0, 0), (1, 0), (1, 0), (1, 0), (1, 0), (1, 0), (1, 0),
-        (1, 0), (1, 0), (1, 0), (1, 0), (1, 0), (1, 0),  (1, 0), (1, 0), (1, 0),
-        (1, 0), (1, 0), (1, 0), (1, 0), (1, 0), (1, 0),  (1, 0), (1, 0), (1, 0)
-    ]
-
     from adp.widgets import w_ttkstyle
     from time import perf_counter
+    from constants import CWD
+    import random
+    from time import sleep
 
     geom = "1300x1080+0+0"
-
-    print()
-    # Serial approach to create multiple DupGroup widgets with Checkbuttons
-    start = perf_counter()
-    root = tk.Tk()
-    root.title('DupGroup - Serial Creation Of CheckButtons With Thumnbnail-'
-               'Sized Image')
-    root.geometry(geom)
-    root.configure(background="blue")
-    s = ttk.Style()
-    style = w_ttkstyle.customise_ttk_widgets_style(s)
-    dupgroups = {}
-    for n, (x, y, z, s) in enumerate(zip(gg_iids, ff_iids, ff_paths,
-                                         ff_selected)):
-        dupgroups[x] = DupGroup(root, x, y, z, s,True)
-        dupgroups[x].grid(row=n, column=0, sticky='nsew')
-    # print(f"{len(dupgroups)=} {dupgroups=}")
-
-    end = perf_counter()
-    total_time = end - start
-    print(f"Serial -: {total_time=}s")
-
-    def exit_root():
-        """Function to exit root window"""
-        for group in dupgroups.values():
-            group.reset()
-        dupgroups.clear()
-        root.destroy()
-
-    # Setup root window's shutdown and start it's main events loop
-    root.protocol('WM_DELETE_WINDOW', exit_root)
-    root.mainloop()
+    gids = [f"G{i}" for i in range(10)]
+    random.seed()
+    fids = []
+    selected = []
+    fpaths = []
+    print(CWD)
+    photo = CWD / "widgets" / "testimage.jpg"
+    print(f"{photo=})")
+    for gid in gids:
+        f_ids = []
+        sel = []
+        fps = []
+        total = random.randint(2, 10)
+        for i in range(total):
+            f_ids.append(f"{gid}-P{i}")
+            sel.append(0)
+            fps.append(photo)
+        fids.append(f_ids)
+        selected.append(sel)
+        fpaths.append(fps)
 
 
-
+    # print()
     # Concurrent approach to create multiple DupGroup widgets with Checkbuttons
     start = perf_counter()
     root = tk.Tk()
@@ -470,8 +317,7 @@ if __name__ == '__main__':
                     print(f"Concurrent -: {total_time=}s")
 
     dupgroups = {}
-    for n, (x, y, z, s) in enumerate(zip(gg_iids, ff_iids, ff_paths,
-                                         ff_selected)):
+    for n, (x, y, z, s) in enumerate(zip(gids, fids, fpaths, selected)):
         dupgroups[x] = DupGroup(root, x, y, z, s,False)
         dupgroups[x].grid(row=n, column=0, sticky='nsew')
     # print(f"{len(dupgroups)=} {dupgroups=}")
@@ -481,11 +327,10 @@ if __name__ == '__main__':
     thumbnails_queue = queue.Queue()
     tthread = threading.Thread(
         target=get_thumbnails_concurrently_with_queue,
-        args=(gg_iids, ff_iids, ff_paths, thumbnails_queue),
+        args=(gids, fids, fpaths, thumbnails_queue, (200, 200)),
         name="thumbnailthread")
     tthread.start()
     check_thread(tthread, thumbnails_queue, dupgroups, start)
-
 
     def exit_root():
         """Function to exit root window"""
@@ -493,9 +338,40 @@ if __name__ == '__main__':
             group.reset()
         dupgroups.clear()
         root.destroy()
+        root.quit()
 
     # Setup root window's shutdown and start it's main events loop
     root.protocol('WM_DELETE_WINDOW', exit_root)
     root.mainloop()
 
 
+    # Serial approach to create multiple DupGroup widgets with Checkbuttons
+    start = perf_counter()
+    root = tk.Tk()
+    root.title('DupGroup - Serial Creation Of CheckButtons With Thumnbnail-'
+               'Sized Image')
+    root.geometry(geom)
+    root.configure(background="blue")
+    s = ttk.Style()
+    style = w_ttkstyle.customise_ttk_widgets_style(s)
+    dupgroups = {}
+    for n, (x, y, z, s) in enumerate(zip(gids, fids, fpaths,selected)):
+        dupgroups[x] = DupGroup(root, x, y, z, s,True)
+        dupgroups[x].grid(row=n, column=0, sticky='nsew')
+    # print(f"{len(dupgroups)=} {dupgroups=}")
+
+    end = perf_counter()
+    total_time = end - start
+    print(f"Serial -: {total_time=}s")
+
+    def exit_root():
+        """Function to exit root window"""
+        for group in dupgroups.values():
+            group.reset()
+        dupgroups.clear()
+        root.destroy()
+        root.quit()
+
+    # Setup root window's shutdown and start it's main events loop
+    root.protocol('WM_DELETE_WINDOW', exit_root)
+    root.mainloop()

@@ -1,5 +1,3 @@
-# print(f"{__name__}")
-
 # Python modules
 import os
 import hashlib

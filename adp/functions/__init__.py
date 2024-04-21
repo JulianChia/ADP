@@ -1,5 +1,3 @@
-# print(f"{__name__}")
-
 # Import from modules in functions directory
 from adp.functions.tools import *
 from adp.functions.dataklasses import *
@@ -14,4 +12,3 @@ __all__ = [
 	name for name in dir()
 	if not name.startswith('_') and name not in exclude
 ]
-# print(f"functions {__all__=}")

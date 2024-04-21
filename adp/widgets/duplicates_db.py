@@ -391,165 +391,24 @@ class DuplicatesDB:
 		self.con.commit()
 
 
-if __name__ == "__main__":
-	source = str(CWD / "Samples" / "Photos4")
-	duplicates = {
-		'6035a204bc4beea6ae4e539b0ef76ef8bc5fd1e1c7c6ba3e9711d941a47386c3': {
-			source + '/Wallpapers_old/Apartments/maxresdefault.jpg',
-			source + '/Wallpapers/Apartments/maxresdefault.jpg'},
-		'0f224df4d0c8d0eb5c80b329e3109f4622a2156b7c134787c8caed1ce1c7d692': {
-			source + '/Wallpapers/Apartments/Clean-Apartment-Interior-Design'
-					 '.jpeg',
-			source + '/Wallpapers/Apartments/Clean-Apartment-Interior-Design'
-					 '-2.jpeg',
-			source + '/Wallpapers_old/Apartments/Clean-Apartment-Interior'
-					 '-Design.jpeg',
-			source + '/Wallpapers_old/Apartments/Clean-Apartment-Interior'
-					 '-Design-2.jpeg'},
-		'6cc08b13d0b0c2bc8716f600003f3f83af81e9d513d10cdf240144f0ef6bc825': {
-			source + '/Wallpapers/blue_dwell_in_possibility.jpg',
-			source + '/Wallpapers_old/blue_dwell_in_possibility.jpg'},
-		'6539177353859ce846a90e067fac850c6196dca3420b08fb8dd751432c0e18b8': {
-			source + '/Wallpapers/Apartments/MPM94144.jpg',
-			source + '/Wallpapers_old/Apartments/MPM94144.jpg'},
-		'64575ec8e1ff28f7bc071243350c8bfa51b8dd727a142581f43dd93c6d96e4b3': {
-			source + '/Wallpapers_old/Apartments/98758711.jpg',
-			source + '/Wallpapers/Apartments/98758711.jpg'},
-		'7e4e229ea05b5767f474759f169cb18935cd6108f65811b0b9431d1f11a5c7a7': {
-			source + '/Wallpapers_old/869984-pine-tree-wallpaper.jpg',
-			source + '/Wallpapers/869984-pine-tree-wallpaper.jpg'},
-		'08387d3167070ffb50c96dd53f14caf0d19576bf038c62c8d45620baa0fa5f8b': {
-			source + '/Wallpapers_old/beach.jpg',
-			source + '/Wallpapers/beach.jpg'},
-		'fb5481bc2b623779bdeaa2f90bd9d60557eca3dbcde35a93a71fd9fcf9798dfa': {
-			source + '/Wallpapers_old/HighSierra-wallpapers/Sierra.jpg',
-			source + '/Wallpapers/HighSierra-wallpapers/Sierra.jpg'},
-		'307ba13e4521f631941e90c468c4899b9c28e98c45a5b9e98d19d7f98e20ea05': {
-			source + '/Wallpapers_old/HighSierra-wallpapers/High Sierra.jpg',
-			source + '/Wallpapers/HighSierra-wallpapers/High Sierra.jpg'},
-		'a9b4396d01006fcfe02ea516b5f21f7ab02c2bd643fe3f8197ecaa5de3dd8800': {
-			source + '/Wallpapers/blue-dna-molecular-structure.png',
-			source + '/Wallpapers_old/blue-dna-molecular-structure.png'},
-		'b0a33cfd3cb9968456614fa588c36c2612fb765ee0641cd4444bdd3e230377de': {
-			source + '/Wallpapers_old/Apartments/pebbles-apartments-nice'
-					 '-living-area-p.webp',
-			source + '/Wallpapers/Apartments/pebbles-apartments-nice-living'
-					 '-area-p.webp'},
-		'eeb5b5f0dd46c9c3f71500e4bbbde72b234bc9326deca5404e85d57e42bf0837': {
-			source + '/Wallpapers_old/apple-september-2019-event-1920x1080-4k'
-					 '-22059.jpg',
-			source + '/Wallpapers/apple-september-2019-event-1920x1080-4k'
-					 '-22059.jpg',
-			source + '/Wallpapers/apple-september-2019-event-1920x1080-4k'
-					 '-22059 (copy).jpg',
-			source + '/Wallpapers_old/apple-september-2019-event-1920x1080-4k'
-					 '-22059 (copy).jpg'},
-		'4620cdb971c9b722e2836dd13695bd7daaba1c79302e4eb80a870d56c033a825': {
-			source + '/Wallpapers/demo/copy.jpg',
-			source + '/Wallpapers_old/demo/dog-1920x1080-puppy-white-animal'
-					 '-pet-beach-sand-sea-1611.jpg',
-			source + '/Wallpapers_old/demo/copy.jpg',
-			source + '/Wallpapers/demo/dog-1920x1080-puppy-white-animal-pet'
-					 '-beach-sand-sea-1611.jpg'},
-		'aea4dfdb61613dece386929ef39942fbcf4e75b0192b178ada5b1aa095480b26': {
-			source + '/Wallpapers/demo/Sierra2.jpg',
-			source + '/Wallpapers/HighSierra-wallpapers/Sierra 2.jpg',
-			source + '/Wallpapers_old/demo/Sierra2.jpg',
-			source + '/Wallpapers_old/HighSierra-wallpapers/Sierra 2.jpg'},
-		'6bc6e42f0e97ecea95b629386840c78e15d46c8fa7e6897bbbcfc977119c8326': {
-			source + '/Wallpapers/dmb_mountain_blue.jpg',
-			source + '/Wallpapers_old/dmb_mountain_blue.jpg'},
-		'3139e97f8d4632e52f3e1a85e0d02812ed152abc4a704a646815ce8e3f247794': {
-			source + '/Wallpapers_old/Zoom/room.jpg',
-			source + '/Wallpapers/Zoom/room.jpg'},
-		'7775518190fa2bbd89db979d640407f8e22ac30b8350485b35ae16967cc8296d': {
-			source + '/Wallpapers_old/blue_sea_boardwalk.jpg',
-			source + '/Wallpapers/blue_sea_boardwalk.jpg'},
-		'0b1f83303887604e55e24b81033ea08a9b2d920054e493717db6ef051adc69c8': {
-			source + '/Wallpapers_old/dmb_mountain_scene.jpg',
-			source + '/Wallpapers/dmb_mountain_scene.jpg'},
-		'7aa32c2a2d0a0477f4ea5db0f4f5cc85f47e94fe3772742bd28f1351f535f9b2': {
-			source + '/Wallpapers_old/demo/Milaidhoo-Island-Maldives-Beach'
-					 '-Bedroom-Feat.jpg',
-			source + '/Wallpapers_old/Milaidhoo-Island-Maldives-Beach-Bedroom'
-					 '-Feat.jpg',
-			source + '/Wallpapers/Milaidhoo-Island-Maldives-Beach-Bedroom'
-					 '-Feat.jpg',
-			source + '/Wallpapers/demo/Milaidhoo-Island-Maldives-Beach'
-					 '-Bedroom-Feat.jpg'},
-		'18f8f411c14eba2dc3e64d7c250542d1a1994854363a495411660a7a7dc79961': {
-			source + '/Wallpapers_old/dandelion-1920x1080_flower_zoom.jpg',
-			source + '/Wallpapers/dandelion-1920x1080_flower_zoom.jpg'},
-		'61bf6d7ee48fc4bf9693346af49d34e05b5133c1e27d31caf8d5c488b5508d91': {
-			source + '/Wallpapers/dmb_earth.jpg',
-			source + '/Wallpapers_old/dmb_earth.jpg'},
-		'798c83a6255ed02acba4648e8979db3761763e7d2a92a0a6b2e850ce977a3946': {
-			source + '/Wallpapers_old/blue_wallpaper.jpg',
-			source + '/Wallpapers/blue_wallpaper.jpg'},
-		'03edf41b6b06ffea2b6457ba7b6d5d6ec8563358022ecd21afc65a2181c20f79': {
-			source + '/Wallpapers/dmb_pexels-pixabay-459261.jpg',
-			source + '/Wallpapers_old/dmb_pexels-pixabay-459261.jpg'},
-		'72429aa324257e4f032fc5ed5a166a53e7b4fbb478cc4f585a8f2b925c488b73': {
-			source + '/Wallpapers/dmb_art.jpg',
-			source + '/Wallpapers_old/dmb_art.jpg'},
-		'9b9074ef728d700380354eab8821cfc2995971cf88c32bf4df907f16afa13a8d': {
-			source + '/Wallpapers/Blue_honeycomb.jpg',
-			source + '/Wallpapers_old/Blue_honeycomb.jpg'},
-		'bb149fac4f236ce430e3e744880d09dfdd2c2dd2d0d3c0cf0f70d6ea23253dad': {
-			source + '/Wallpapers/dmb_Gollinger_Wasserfall_Austria.jpg',
-			source + '/Wallpapers_old/dmb_Gollinger_Wasserfall_Austria.jpg'},
-		'c33810e9dde7206e74d73b541173418cac0688286a85ebbe7d273b84ca6036bd': {
-			source + '/Wallpapers_old/dmb_7006190-4k.jpg',
-			source + '/Wallpapers/dmb_7006190-4k.jpg'},
-		'5850dcb91d40b6cd6b086a426199f98e6ba9c5d87fbc57309b4f2d7ced92153c': {
-			source + '/Wallpapers_old/blue_magenta.jpg',
-			source + '/Wallpapers/blue_magenta.jpg'},
-		'8fd9d0920e910253ca6007e983b294d651807266934f72b3e1378b0751890f24': {
-			source + '/Wallpapers_old/dandelion-1920x1080_flower.jpg',
-			source + '/Wallpapers/dandelion-1920x1080_flower.jpg'},
-		'743fcb7755a94317069a0dc07eb7e88a7fc4a6b78dfd80d4296ae6fec3b9b81c': {
-			source + '/Wallpapers/dmb_monument_valley.jpg',
-			source + '/Wallpapers_old/dmb_monument_valley.jpg'},
-		'f0f0cecc7f56e2d3f840455e7439f09a5b736b151265e4404b27c8784afb7dfe': {
-			source + '/Wallpapers_old/lake-tekapo-1920x1080-new-zealand'
-					 '-mountains-sky-clouds-8k-16351.jpg',
-			source + '/Wallpapers/lake-tekapo-1920x1080-new-zealand-mountains'
-					 '-sky-clouds-8k-16351.jpg'},
-		'b14dafa7c37d95571968178b70ec4cbb822619d4bc936ffcb52ae47eb686beb0': {
-			source + '/Wallpapers_old/Modern-Living-Rooms_13.jpg',
-			source + '/Wallpapers/Modern-Living-Rooms_13.jpg'},
-		'3fa31c8fb9a569a19d3194cc69ece0878a08274fde2d69c9afa6752354b6926e': {
-			source + '/Wallpapers_old/dmb_neuronspiketrain.jpg',
-			source + '/Wallpapers/dmb_neuronspiketrain.jpg'},
-		'b139b508d67a57d471347a501a7d24ea6c88ec8a0414c1894bd9fa5c7414be6a': {
-			source + '/Wallpapers_old/dmb_earth_from_space.jpg',
-			source + '/Wallpapers/dmb_earth_from_space.jpg'},
-		'6ec0002b32a9744ecb48185c4d0b0bcfa0f508de1d1711bd0f3eee13544dd70f': {
-			source + '/Wallpapers/dmb_199836.jpg',
-			source + '/Wallpapers_old/dmb_199836.jpg'},
-		'14a6862a62d185d8389ab27b9ab9f6b69920c15836a791f4504c28323b16ce33': {
-			source + '/Wallpapers_old/dmb_San_Francisco.jpg',
-			source + '/Wallpapers/dmb_San_Francisco.jpg'},
-		'5e6cd4106791983b24789b55c23158b75d7465d80177d89fe90af4907e62fe81': {
-			source + '/Wallpapers/coa2022.jpeg',
-			source + '/Wallpapers_old/coa2022.jpeg'},
-		'62979f996a2c7ec44d64c9b2a29b252b138bffb8a23036bbe46f758209a99d46': {
-			source + '/Wallpapers_old/blue_whaleshark.jpg',
-			source + '/Wallpapers/blue_whaleshark.jpg'},
-		'970e1358d7a6ecb5c5c91709fb8641826619d9dae5b28fdc4d7b1549dca073a3': {
-			source + '/Wallpapers_old/dmb_pexels-pixabay-358482.jpg',
-			source + '/Wallpapers/dmb_pexels-pixabay-358482.jpg'},
-	}
-
-	db = DuplicatesDB()
-	print(f"\n{db.is_table_empty()=} {type(db.is_table_empty())=}")
-	index = [i for i in range(len(duplicates))]
-	print(f"\n{db.is_table_empty()=}")
-	db.populate(source, duplicates)
-
-	print(f"\n{db.is_table_empty()=}")
-
-	g_selected = db.get_selected_of_group("G1")
-	print(f"\n{type(g_selected)=} {g_selected=}")
-
-	db.close()
+# if __name__ == "__main__":
+# 	from adp.functions.photo_finder_concurrent import fast_scandir, scandir_images_concurrently
+# 	from adp.functions.duplicates_finder_concurrent import detect_duplicates_concurrently
+#
+# 	source = str(CWD.parent / "Samples" / "Photos4")
+# 	subdirs = fast_scandir(source)
+# 	photos = scandir_images_concurrently([source] + subdirs, cfe="process")
+# 	duplicates = detect_duplicates_concurrently(photos, cfe="process")
+#
+# 	db = DuplicatesDB()
+# 	print(f"\n{db.is_table_empty()=} {type(db.is_table_empty())=}")
+# 	index = [i for i in range(len(duplicates))]
+# 	print(f"\n{db.is_table_empty()=}")
+# 	db.populate(source, duplicates)
+#
+# 	print(f"\n{db.is_table_empty()=}")
+#
+# 	g_selected = db.get_selected_of_group("G1")
+# 	print(f"\n{type(g_selected)=} {g_selected=}")
+#
+# 	db.close()

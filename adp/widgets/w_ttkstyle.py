@@ -1,5 +1,3 @@
-# print(f"{__name__}")
-
 # Python modules
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -24,8 +22,8 @@ def customise_ttk_widgets_style(ss):
     ss.theme_use('default')
 
     # All Widgets
-    ss.configure(".", font=dfont, background=BG, foreground=FG,
-                 cap=tk.ROUND, join=tk.ROUND)
+    ss.configure(".", font=dfont, background=BG, foreground=FG, cap=tk.ROUND,
+                 join=tk.ROUND)
 
     # ttk.Frame
     # ss.configure('TFrame', background=BG, borderwidth=0)  # For debugging
@@ -33,7 +31,7 @@ def customise_ttk_widgets_style(ss):
     # ss.configure('About.TFrame', background="gray",)  # For debugging
     # ss.configure('Gframe.TFrame', background='green')  # For debugging
     # ss.configure('Framebns.TFrame', background="violet")  # For debugging
-
+    # ss.configure('TableFrame.TFrame', background="red", borderwidth=0)  # For debugging
 
     # Default ttk.Button
     ss.configure('TButton', padding=5, relief=tk.FLAT, background=BG,
@@ -66,6 +64,17 @@ def customise_ttk_widgets_style(ss):
                  background=PB_COLOR)
 
     # Widgets of DupGroup
+    # Real
+    ss.configure('DupGroup.TFrame', background=BG2)
+    ss.configure('infoframe.TFrame', background=BG2)
+    ss.configure('infoframe.TLabel', background=BG2, foreground=FG, font=bfont)
+    ss.configure("vp.TLabel", background=BG2, foreground=FG2)
+    # Debug
+    # ss.configure('DupGroup.TFrame', background="purple")
+    # ss.configure('infoframe.TFrame', background="yellow")
+    # ss.configure('infoframe.TLabel', background="green", font=bfont,
+    #              foreground=FG)
+    # ss.configure("vp.TLabel", background="orange", foreground="green")
     # ttk.Checkbutton
     ss.layout('TCheckbutton', [('Checkbutton.padding',
                                {'sticky': 'nswe', 'children':
@@ -94,22 +103,7 @@ def customise_ttk_widgets_style(ss):
                            ('!disabled', 'selected', '#e35d18'),  # change this color
                            ('disabled', 'selected', '#a3a3a3')],
            )
-    # ss.map('original.TCheckbutton',
-    #        indicatorcolor=[('!disabled', 'selected', BG2)],
-    #        )
-    # ss.map('copies.TCheckbutton',
-    #        indicatorcolor=[('!disabled', 'selected', BG2)],
-    #        )
     ss.configure("TCheckbutton", background=BG2, foreground=FG)
-    # ttk.Frame
-    ss.configure('DupGroup.TFrame', background=BG2)
-    ss.configure('infoframe.TFrame', background=BG2)
-    # ttk.Label
-    ss.configure('infoframe.TLabel', background=BG2, foreground=FG, font=bfont)
-    # ss.configure('DupGroup.TFrame', background="pink")
-    # ss.configure('infoframe.TFrame', background="yellow")
-    # ss.configure('infoframe.TLabel', background="green", font=bfont,
-    #              foreground=FG)
 
     # ttk.Treeview
     ss.configure('Treeview', background=BG, fieldbackground=BG, foreground=FG,
