@@ -1,14 +1,21 @@
-# print(f"{__name__}")
-
 # Python modules
+import queue
+import threading
 import os
 import concurrent.futures as cf
+from itertools import repeat
+from time import perf_counter
 
-__all__ = ["detect_duplicates_concurrently"]
+# Package modules
+from adp.functions.tools import percent_complete
+
+__all__ = ["detect_duplicates_concurrently", "reshape_list1d",
+           "check_hash_duplication"]
 __version__ = '0.1'
-__author__ = 'Chia Yan Hon, Julian.'
-__copyright__ = "Copyright 2023, Chia Yan Hon, Julian."
 __license__ = "Apache License, Version 2.0"
+__copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
+__author__ = 'Chia Yan Hon, Julian.'
+__email__ = "julianchiayh@gmail.com"
 
 
 def reshape_list1d(list1d: list, n: int) -> list:
@@ -62,87 +69,95 @@ def check_hash_duplication(batch: list, rasterimages: list) -> dict:
 
 
 def detect_duplicates_concurrently(rasterimages: list,
-                                   ncpu : int = os.cpu_count(),
-                                   cfe: str = "thread") -> dict:
-    if cfe not in ["process", "thread"]:
-        ValueError(f"cfe={cfe} is invalid. It's value must either be "
-                   f"'process' or 'thread'.")
-    else:
-        if cfe in "process":
-            # print(f"- using concurrent.future.ProcessPoolExecutor")
-            executor = cf.ProcessPoolExecutor
-        else:
-            # print(f"- using concurrent.future.ThreadPoolExecutor")
-            executor = cf.ThreadPoolExecutor
+                                   job_queue: queue.Queue,
+                                   ncpu: int = os.cpu_count(),
+                                   cfe: str = "Process",
+                                   exit_event=None,) -> None:
+    """Function to detect duplicates in `rasterimages` concurrently. Its
+    progress and result can be extracted from `job_queue`. Progress is also
+    printed to the terminal."""
+    start = perf_counter()
 
     batches = reshape_list1d(rasterimages, ncpu)
-    futures = []
-    print(f'Concurrent {cfe} scanning for duplicates has started...')
-    with executor(max_workers=ncpu) as execu:
-        for batch in batches:
-            futures.append(
-                execu.submit(check_hash_duplication, batch, rasterimages)
-            )
+    njobs = len(batches)
+    jobs_completed = 0
+    pbformat = {"bar_width": 50, "title": "Duplicates", "print_perc": True}
+    percent_complete(jobs_completed, njobs, **pbformat)
 
     duplicates = dict()
-    for f in cf.as_completed(futures):
-        results = f.result()  # dict returned by each future
-        if any(results):
-            for k, v in results.items():  # each element of dict
-                if k not in duplicates:
-                    duplicates[k] = v
-                else:
-                    duplicates[k].union(v)
-    # print(f'concurrent - {len(duplicates)=} {duplicates=}')
+    chunksize = 1  # Optimised
+    match cfe:
+        case "process": executor = cf.ProcessPoolExecutor(max_workers=ncpu)
+        case "thread": executor = cf.ThreadPoolExecutor(max_workers=ncpu)
+    with executor as execu:
+        results = execu.map(check_hash_duplication,
+                            batches, repeat(rasterimages, njobs),
+                            chunksize=chunksize,
+                            timeout=60*10)
+        for result in results:
+            # Emergency exit
+            if isinstance(exit_event, threading.Event):
+                if exit_event.is_set():
+                    break
+            # Get results
+            if any(result):
+                for k, v in result.items():  # each element of dict
+                    if k not in duplicates:
+                        duplicates[k] = v
+                    else:
+                        duplicates[k].union(v)
+            # Update progress in terminal & queue
+            jobs_completed += 1
+            percent_complete(jobs_completed, njobs, **pbformat)
+            job_queue.put(("DupRunning", jobs_completed, njobs))
+    # Inform queue that job has completed
+    end = perf_counter()
+    job_queue.put(("DupCompleted", duplicates, start, end))
 
-    print(f'Concurrent {cfe} scanning for duplicates has completed.')
-    return duplicates
 
-
-if __name__ == '__main__':
-    # Python module
-    from time import perf_counter
-
-    # Project modules
-    import photo_finder_concurrent as pfc
-    import duplicates_finder_serial as dfs
-    from adp.widgets.constants import CWD
-
-    print(f"{CWD.parent=}")
-    # fpath = str(CWD.parent) + "/Samples/Photos1"
-    # fpath = str(CWD.parent) + "/Samples/Photos2"
-    # fpath = str(CWD.parent) + "/Samples/Photos3"
-    fpath = str(CWD.parent) + "/Samples/Photos4"
-    # fpath = str(Path().home())
-
-    start0 = perf_counter()
-    subdirs = pfc.fast_scandir(fpath)
-    end0 = perf_counter()
-    print(f"\nFound {len(tuple(subdirs))} sub-dirs in {end0 - start0} secs.")
-
-    print()
-    start1 = perf_counter()
-    photos = pfc.scandir_images_concurrently([fpath] + subdirs, cfe="process")
-    end1 = perf_counter()
-    method1 = end1 - start1
-    print(f"Found {len(photos)} raster image in {method1} secs.")
-
-    print()
-    start2 = perf_counter()
-    cduplicates = detect_duplicates_concurrently(photos, cfe="process")
-    end2 = perf_counter()
-    method2 = end2 - start2
-    ncdup = sum([len(i) for i in cduplicates.values()])
-    print(f"Found {ncdup} duplicates in {method2} secs.")
-
-    print(f'\nSerial scanning for duplicate photos started...')
-    start3 = perf_counter()
-    sduplicates = dfs.detect_duplicates_serially(photos)
-    end3 = perf_counter()
-    print(f'Serial scanning for duplicate photos completed.')
-    method3 = end3 - start3
-    nsdup = sum( [len(i) for i in sduplicates.values()] )
-    print(f"Found {nsdup} duplicates in {method3} secs.")
-
-    print(f"\nConcurrent is {method2 / method3} times of Serial.")
-
+# def detect_duplicates_concurrently(rasterimages: list,
+#                                    ncpu : int = os.cpu_count(),
+#                                    cfe: str = "thread") -> dict:
+#     if cfe not in ["process", "thread"]:
+#         ValueError(f"cfe={cfe} is invalid. It's value must either be "
+#                    f"'process' or 'thread'.")
+#     else:
+#         if cfe in "process":
+#             # print(f"- using concurrent.future.ProcessPoolExecutor")
+#             executor = cf.ProcessPoolExecutor
+#         else:
+#             # print(f"- using concurrent.future.ThreadPoolExecutor")
+#             executor = cf.ThreadPoolExecutor
+#
+#     batches = reshape_list1d(rasterimages, ncpu)
+#     njobs = len(batches)
+#     jobs_completed = 0
+#
+#     def _on_complete(ifuture):
+#         nonlocal jobs_completed
+#         # Update record on the number of completed jobs
+#         jobs_completed += 1
+#         percent_complete(jobs_completed, njobs, bar_width=60, title="",
+#                          print_perc=True)
+#
+#     futures = []
+#     print(f'Concurrent {cfe} scanning for duplicates has started...')
+#     with executor(max_workers=ncpu) as execu:
+#         for batch in batches:
+#             future = execu.submit(check_hash_duplication, batch, rasterimages)
+#             future.add_done_callback(_on_complete)
+#             futures.append(future)
+#
+#     duplicates = dict()
+#     for f in cf.as_completed(futures):
+#         results = f.result()  # dict returned by each future
+#         if any(results):
+#             for k, v in results.items():  # each element of dict
+#                 if k not in duplicates:
+#                     duplicates[k] = v
+#                 else:
+#                     duplicates[k].union(v)
+#     # print(f'concurrent - {len(duplicates)=} {duplicates=}')
+#
+#     # print(f'Concurrent {cfe} scanning for duplicates has completed.')
+#     return duplicates

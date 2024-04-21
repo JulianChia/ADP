@@ -1,7 +1,6 @@
-"""https://github.com/sunbearc22/tkinterWidgets/blob/master/scrframe.py"""
-
-# print(f"{__name__}")
-
+"""Oiriginal Source:
+https://github.com/sunbearc22/tkinterWidgets/blob/master/scrframe.py
+"""
 # Python modules
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -60,14 +59,16 @@ class VerticalScrollFrame(ttk.Frame):
     def __init__(self, master, **options):
         """
         WIDGET-SPECIFIC OPTIONS:
-           style, background, troughcolor, arrowcolor,
-           mainborderwidth, interiorborderwidth, mainrelief, interiorrelief 
+           style, background, cbackground, ibackground, troughcolor, arrowcolor,
+           mainborderwidth, interiorborderwidth, mainrelief, interiorrelief
         """
         # Extract key and value from **options using Python3 "pop" function:
         #   pop(key[, default])
         style = options.pop('style', ttk.Style())
-        background = options.pop('background', 'light grey')
-        troughcolor = options.pop('troughcolor', 'grey70')
+        background = options.pop('background', '#E4E4E4')
+        cbackground = options.pop('cbackground', '#E4E4E4')
+        ibackground = options.pop('ibackground', '#E4E4E4')
+        troughcolor = options.pop('troughcolor', 'white')
         arrowcolor = options.pop('arrowcolor', 'black')
         mainborderwidth = options.pop('mainborderwidth', 0)
         interiorborderwidth = options.pop('interiorborderwidth', 0)
@@ -78,7 +79,7 @@ class VerticalScrollFrame(ttk.Frame):
             """Setup stylenames of outer frame, interior frame and vertical
             scrollbar."""
             style.configure('main.TFrame', background=background)
-            style.configure('interior.TFrame', background=background)
+            style.configure('interior.TFrame', background=ibackground)
             style.configure('canvas.Vertical.TScrollbar',
                             background=background, troughcolor=troughcolor,
                             arrowcolor=arrowcolor)
@@ -99,7 +100,7 @@ class VerticalScrollFrame(ttk.Frame):
         ttk.Frame.__init__(self, master, style='main.TFrame',
                            borderwidth=mainborderwidth, relief=mainrelief)
         _set_style()
-        self._create_widgets(interiorborderwidth, interiorrelief, background)
+        self._create_widgets(interiorborderwidth, interiorrelief, cbackground)
         self._set_bindings()
 
     def _create_widgets(self, interiorborderwidth, interiorrelief, background):
@@ -157,6 +158,7 @@ class VerticalScrollFrame(ttk.Frame):
             if interior.winfo_reqwidth() != canvas.winfo_width():
                 # update the canvas's width to fit the inner frame
                 canvas.config(width=interior.winfo_reqwidth())
+                # self.update_idletasks()
 
         def _configure_canvas(event):
             # print(f"\ndef _configure_canvas(event):")
@@ -164,8 +166,9 @@ class VerticalScrollFrame(ttk.Frame):
                 # update the inner frame's width to fill the canvas
                 maxwidth = max([event.width, canvas.winfo_reqwidth()])
                 canvas.itemconfigure(interior_id, width=maxwidth)
+                # self.update_idletasks()
 
-        def _bind_to_mousewheel_linuxos(event):
+        def _bind_vscrollbar_to_mousewheel_linuxos(event):
 
             def scrollup(e):
                 canvas.yview_scroll(-1, 'units')
@@ -180,37 +183,56 @@ class VerticalScrollFrame(ttk.Frame):
             canvas.bind_all('<Button-4>', scrollup)
             canvas.bind_all('<Button-5>', scrolldown)
 
-        def _unbind_from_mousewheel_linuxos(event):
+        def _unbind_vscrollbar_to_mousewheel_linuxos(event):
             canvas.unbind_all(sequence="<Button-4>")
             canvas.unbind_all(sequence="<Button-5>")
 
-        def _bind_to_mousewheel_winos(event):
-            canvas.bind_all(
-                "<MouseWheel>",
-                canvas.yview_scroll(int(-1*(event.delta/120)), "units"))
+        def _bind_vscrollbar_to_mousewheel_macos(event):
 
-        def _unbind_from_mousewheel_winos(event):
+            def scrollupdown(ev):
+                canvas.yview_scroll(int(-1 * ev.delta), "units")
+                if ev.delta < 0:
+                    canvas.after_idle(canvas.event_generate,
+                                      "<<VSFCanvasScrolledDown>>")
+                elif ev.delta > 0:
+                    canvas.after_idle(canvas.event_generate,
+                                      "<<VSFCanvasScrolledUp>>")
+
+            canvas.bind_all('<MouseWheel>', scrollupdown)
+
+        def _bind_vscrollbar_to_mousewheel_winos(event):
+
+            def scrollupdown(ev):
+                canvas.yview_scroll(int(-1 * ev.delta/120), "units")
+                if ev.delta < 0:
+                    canvas.after_idle(canvas.event_generate,
+                                      "<<VSFCanvasScrolledDown>>")
+                elif ev.delta > 0:
+                    canvas.after_idle(canvas.event_generate,
+                                      "<<VSFCanvasScrolledUp>>")
+
+            canvas.bind_all('<MouseWheel>', scrollupdown)
+
+        def _unbind_vscrollbar_from_mousewheel(event):
             canvas.unbind_all("<MouseWheel>")
 
-        def _bind_hscrollbar_to_mousewheel_winos(event):
-            hscrollbar.bind_all(
-                "<MouseWheel>",
-                canvas.xview_scroll(int(-1*(event.delta/120)), "units"))
-
-        def _unbind_hscrollbar_from_mousewheel_winos(event):
-            hscrollbar.unbind_all("<MouseWheel>")
-
         def _bind_hscrollbar(event):
+
             if system in ["Linux"]:
                 hscrollbar.bind('<Enter>',
                                 _bind_hscrollbar_to_mousewheel_linuxos)
                 hscrollbar.bind('<Leave>',
                                 _unbind_hscrollbar_from_mousewheel_linuxos)
+            elif system in ["Darwin"]:
+                hscrollbar.bind('<Enter>',
+                                _bind_hscrollbar_to_mousewheel_macos)
+                hscrollbar.bind('<Leave>',
+                                _unbind_hscrollbar_from_mousewheel)
             elif system in ["Windows"]:
                 hscrollbar.bind('<Enter>',
                                 _bind_hscrollbar_to_mousewheel_winos)
                 hscrollbar.bind('<Leave>',
-                                _unbind_hscrollbar_from_mousewheel_winos)
+                                _unbind_hscrollbar_from_mousewheel)
 
         def _unbind_hscrollbar(event):
             hscrollbar.unbind('<Enter>')
@@ -228,23 +250,48 @@ class VerticalScrollFrame(ttk.Frame):
                 canvas.after_idle(canvas.event_generate,
                                   "<<VSFCanvasScrolledRight>>")
 
-            canvas.bind_all('<Button-4>', scrollleft)
-            canvas.bind_all('<Button-5>', scrollright)
+            canvas.bind_all('<Button-4>', scrollright)
+            canvas.bind_all('<Button-5>', scrollleft)
+
+        def _bind_hscrollbar_to_mousewheel_macos(event):
+
+            def scroll_xsb(ev):
+                print(f"{ev.widget=} {ev.delta=} {ev.num=}")
+                canvas.xview_scroll(int(-1 * ev.delta), "units")
+
+            event.widget.bind("<MouseWheel>", scroll_xsb)
+
+        def _bind_hscrollbar_to_mousewheel_winos(event):
+
+            def scroll_xsb(ev):
+                print(f"{ev.widget=} {ev.delta=} {ev.num=}")
+                canvas.xview_scroll(int(-1 * ev.delta/120), "units")
+
+            event.widget.bind("<MouseWheel>", scroll_xsb)
+
+        def _unbind_hscrollbar_from_mousewheel(event):
+            hscrollbar.unbind_all("<MouseWheel>")
 
         def _unbind_hscrollbar_from_mousewheel_linuxos(event):
             hscrollbar.unbind_all("<Button-4>")
             hscrollbar.unbind_all("<Button-5>")
 
+        # Bindings for configure events
         interior.bind('<Configure>', _configure_interior)
         canvas.bind('<Configure>', _configure_canvas)
 
+        # Bindings for vertical scrolling of canvas and vscrollbar
         if system in ["Linux"]:
-            canvas.bind('<Enter>', _bind_to_mousewheel_linuxos)
-            canvas.bind('<Leave>', _unbind_from_mousewheel_linuxos)
+            canvas.bind('<Enter>', _bind_vscrollbar_to_mousewheel_linuxos)
+            canvas.bind('<Leave>', _unbind_vscrollbar_to_mousewheel_linuxos)
+        elif system in ["Darwin"]:
+            canvas.bind('<Enter>', _bind_vscrollbar_to_mousewheel_macos)
+            canvas.bind('<Leave>', _unbind_vscrollbar_from_mousewheel)
         elif system in ["Windows"]:
-            canvas.bind('<Enter>', _bind_to_mousewheel_winos)
-            canvas.bind('<Leave>', _unbind_from_mousewheel_winos)
+            canvas.bind('<Enter>', _bind_vscrollbar_to_mousewheel_winos)
+            canvas.bind('<Leave>', _unbind_vscrollbar_from_mousewheel)
 
+        # Bindings for vertical scrolling
         hscrollbar.bind("<<AutoScrollbarOn>>", _bind_hscrollbar)
         hscrollbar.bind("<<AutoScrollbarOff>>", _unbind_hscrollbar)
 
@@ -257,8 +304,8 @@ class Example(ttk.Frame):
 
         super().__init__(master)
         self.master = master
-        self.master.title('VerticalScrollFrame')
-        self.master.geometry('300x350')
+        self.winfo_toplevel().title('VerticalScrollFrame')
+        self.winfo_toplevel().geometry('300x350')
         self.frame = None
         self.label = None
         self.textbox = None
@@ -269,6 +316,8 @@ class Example(ttk.Frame):
     def create_widgets(self, bg0, bg1):
         self.frame = VerticalScrollFrame(self,
                                          background=bg1,
+                                         cbackground=bg1,
+                                         ibackground=bg1,
                                          troughcolor=bg0,
                                          arrowcolor='white',
                                          scrollbarcolor="grey",

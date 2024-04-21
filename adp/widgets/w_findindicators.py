@@ -1,5 +1,3 @@
-# print(f"{__name__}")
-
 # Python modules
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -7,13 +5,15 @@ from tkinter import font
 
 # Project modules
 from adp.functions import filesize
-from adp.widgets.constants import D1_C0, D1_C1, D1_C2, BG, FG, TFONT, DFONT, BFONT
+from adp.widgets.constants import (D1_C0, D1_C1, D1_C2, BG, FG, TFONT, DFONT,
+                                   BFONT)
 
 __all__ = ["Findings", "DonutCharts"]
 __version__ = '0.1'
-__author__ = 'Chia Yan Hon, Julian.'
-__copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __license__ = "Apache License, Version 2.0"
+__copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
+__author__ = 'Chia Yan Hon, Julian.'
+__email__ = "julianchiayh@gmail.com"
 
 
 class Findings(ttk.Frame):
@@ -23,7 +23,7 @@ class Findings(ttk.Frame):
     User Methods:
     .reset()
     .update_subfolders(quantity=0, duration=0.0, dunit='secs')
-    .update_photos(quantity=0, duration=0.0, dunit='secs')
+    .update_pictures(quantity=0, duration=0.0, dunit='secs')
     .update_duplicates(quantity=0, duration=0.0, dunit='secs')
     .update_total(duration=0.0, dunit='secs'):
     """
@@ -31,10 +31,10 @@ class Findings(ttk.Frame):
     def __init__(self, master):
         super().__init__(master, width=350, height=115)
         self.nsf = tk.IntVar()  # no. of sub-folders
-        self.np = tk.IntVar()   # no. of photos
+        self.np = tk.IntVar()   # no. of pictures
         self.nd = tk.IntVar()   # no. of duplicates
         self.tsf = tk.StringVar()  # time to find no. of sub-folders
-        self.tp = tk.StringVar()   # time to find no. of photos
+        self.tp = tk.StringVar()   # time to find no. of pictures
         self.td = tk.StringVar()   # time to find no. of duplicates
         self.tt = tk.StringVar()   # total time to complete finds
         self.tsf_units = tk.StringVar()  # time units for self.tsf
@@ -72,7 +72,7 @@ class Findings(ttk.Frame):
         self.sf_lb3 = ttk.Label(self, textvariable=self.tsf, **bstyle)
         self.sf_lb4 = ttk.Label(self, textvariable=self.tsf_units, **bstyle)
 
-        self.p_lb1 = ttk.Label(self, text="Photos: ", foreground=D1_C0,
+        self.p_lb1 = ttk.Label(self, text="Pictures: ", foreground=D1_C0,
                                **bstyle)
         self.p_lb2 = ttk.Label(self, textvariable=self.np, foreground=D1_C0,
                                **bstyle)
@@ -122,7 +122,7 @@ class Findings(ttk.Frame):
 
     def reset(self):
         self.update_subfolders()
-        self.update_photos()
+        self.update_pictures()
         self.update_duplicates()
         self.update_total()
 
@@ -135,7 +135,7 @@ class Findings(ttk.Frame):
         self.tsf.set(f'{duration:.3f}')
         self.tsf_units.set(dunit)
 
-    def update_photos(self, quantity=0, duration=0.0, dunit='secs'):
+    def update_pictures(self, quantity=0, duration=0.0, dunit='secs'):
         if quantity < 0:
             raise AttributeError(f"Attribute quantity must be > 0.")
         if duration < 0:
@@ -190,7 +190,6 @@ class DonutCharts(tk.Canvas):
         self.size1 = (size1, "B")
         self.size2 = (size2, "B")
         self.size_t = (size1 + size2, "B")
-        # print(self.quantity1, self.quantity2, self.size1, self.size2, )
         self.title0 = title0
         self.title1 = title1
         self.title2 = title2
@@ -223,7 +222,6 @@ class DonutCharts(tk.Canvas):
         self.tt2_text = None
 
         self._create_gui()
-        # self.reset()
 
     def _create_gui(self):
         # Angles for quantity
@@ -367,13 +365,13 @@ class DonutCharts(tk.Canvas):
         look1 = {"fill": self.bg, "outline": self.color1}
         look2 = {"fill": self.bg, "outline": self.color2}
 
-        # Amend Original appearances when no duplicated photos
+        # Amend Original appearances when no duplicated pictures
         for i in [self.q1_arc, self.q1b_arc, self.s1_arc, self.s1b_arc]:
             self.itemconfigure(i, style=tk.ARC, **look1)
         for i in [self.q1_text, self.q2_text, self.qt_text]:
             self.itemconfigure(i, text=f'0  ({0:.2f}%)')
 
-        # Amend Copies appearances when no photos
+        # Amend Copies appearances when no pictures
         for i in [self.q2_arc, self.q2b_arc, self.s2_arc, self.s2b_arc]:
             self.itemconfigure(i, style=tk.ARC, **look2)
         for i in [self.s1_text, self.s2_text, self.st_text]:
@@ -455,21 +453,17 @@ class DonutCharts(tk.Canvas):
             self.resize()
 
     def resize(self):
-        self.update_idletasks()
         boundary = self.bbox(tk.ALL)
-        # print(f'{boundary=}')
         width = boundary[2]-boundary[0]
         height = boundary[3] - boundary[1]
         self['width'] = width
         self['height'] = height
-        self.update_idletasks()
 
 
 if __name__ == "__main__":
     from adp import functions as func, widgets as ttkstyle
 
     root = tk.Tk()
-    # root['bg'] = BG
     root['bg'] = 'orange'
     s = ttk.Style()
     style = ttkstyle.customise_ttk_widgets_style(s)
@@ -479,18 +473,13 @@ if __name__ == "__main__":
     quantity_c = 1158
     size_o = 1811754583
     size_c = 2144219048
-    # quantity_o = 963
-    # quantity_c = 0
-    # size_o = 1811754583
-    # size_c = 0
-    # dw.update_gui(quantity_o, quantity_c, size_o, size_c)
     dw.reset()
 
     tw = Findings(root)
     tw.grid(row=0, column=0, sticky='nw', padx=(0, 20))
     # Define Quantities
     nsf = 32         # nsubfolders
-    np = 2140        # nphotos
+    np = 2140        # npictures
     no = quantity_o  # noriginals
     nc = quantity_c  # ncopies
     nd = no + nc     # nduplicates
@@ -500,18 +489,13 @@ if __name__ == "__main__":
     tw.nd.set(nd)
     # Define Timings
     tsf = 0.004986518993973732  # sec  tsubfolders
-    tp = 66.23401878005825      # sec  tphotos
+    tp = 66.23401878005825      # sec  tpictures
     td = 0.6218715249560773     # sec  tduplicates
     tt = tsf + tp + td
-    # print(f'{tt=}')
     tsf, tsf_units = func.timings(tsf)
     tp, tp_units = func.timings(tp)
     td, td_units = func.timings(td)
     tt, tt_units = func.timings(tt)
-    # print(f'{tsf=} {tsf_units=}')
-    # print(f'{tp=} {tp_units=}')
-    # print(f'{td=} {td_units=}')
-    # print(f'{tt=} {tt_units=}')
     # Update Timings
     tw.tsf.set(f"{tsf:.3f}")
     tw.tp.set(f"{tp:.3f}")
@@ -522,8 +506,6 @@ if __name__ == "__main__":
     tw.td_units.set(td_units)
     tw.tt_units.set(tt_units)
     tw.reset()
-    # print(f'{tw.sf_lb1["style"]=}')
-    # print(f'{s.lookup(tw.sf_lb1["style"], "font")=}')
 
     root.rowconfigure(0, weight=1)
     root.columnconfigure(0, weight=1)

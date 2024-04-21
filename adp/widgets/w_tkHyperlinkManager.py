@@ -1,6 +1,4 @@
 """Sourced from effbot.org """
-# print(f"{__name__}")
-
 from tkinter import *
 
 __all__ = ["HyperlinkManager"]

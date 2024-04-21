@@ -1,5 +1,3 @@
-# print(f"{__name__}")
-
 # Python modules
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -10,6 +8,7 @@ import argparse
 from PIL import ImageTk
 
 # Project module
+from adp.functions.tools import pop_kwargs
 from adp.widgets.constants import CWD, BG
 from adp.widgets.w_ttkstyle import customise_ttk_widgets_style
 from adp.widgets.w_find import Find
@@ -17,17 +16,19 @@ from adp.widgets.w_table import Table
 from adp.widgets.w_gallery import Gallery
 from adp.widgets.w_about import About
 
-__all__ = ["ADPFind", "ADPTable", "ADPGallery", "ADP", "main"]
+__all__ = ["ADPFind", "ADPTable", "ADPGallery", "ADP",
+           "show_logo_in_terminal", "main"]
 __version__ = '0.1'
-__author__ = 'Chia Yan Hon, Julian.'
-__copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __license__ = "Apache License, Version 2.0"
+__copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
+__author__ = 'Chia Yan Hon, Julian.'
+__email__ = "julianchiayh@gmail.com"
 
 
 class ADPFind(ttk.Frame):
-    """A Tkinter GUI to quickly find duplicated photos.
+    """A Tkinter GUI to quickly find duplicated pictures.
 
-    ADP = Any Duplicated Photos
+    ADP = Any Duplicated Pictures
 
     kwargs:
         cfe - concurrent.future.Executor. Its value is either "process" or
@@ -36,42 +37,38 @@ class ADPFind(ttk.Frame):
     Widget's Roles:
     self: Create and display the Find, About widgets.
     Find: Let user choose a directory and searches it and its children
-          directories for duplicated photos. Its search result is store in a
+          directories for duplicated pictures. Its search result is store in a
           sqlite3 database.
     About: Display the Copyright, License and sources code of this program.
     """
 
     def __init__(self, master, **options):
-        try:
-            cfe = options.pop("cfe")
-        except KeyError:
-            self.cfe = "process"  # default value
-        else:
-            if cfe in ["process", "thread"]:
-                self.cfe = cfe
-            else:
-                raise ValueError(f"cfe={cfe} is invalid. It's value must "
-                                 f"either be 'process' or 'thread'.")
+        self.cfe = pop_kwargs("cfe", ["process", "thread"], options)
         super().__init__(master, **options)
         self.master = master
         self._create_widgets()
 
     def _create_widgets(self):
         self.find = Find(self, layout="vertical", cfe=self.cfe)
-        self.about = About(self, align="left", style="About.TFrame")
+        self.about = About(self, align="right", style="About.TFrame")
 
-        self.find.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 10))
-        self.about.grid(row=1, column=0, columnspan=2, sticky="nsew")
-        self.winfo_toplevel().minsize(width=420, height=480)
+        self.find.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 0))
+        self.about.place(in_=self, relx=1., rely=1., anchor="se")
+        self.find.bind("<Configure>", self._event_resize)
+
+    def _event_resize(self, event):
+        wh = f"{self.winfo_reqwidth() + 30}x470"
+        self.winfo_toplevel().geometry(wh)
+        self.update_idletasks()
 
     def exit(self):
         self.find.exit()
 
 
 class ADPTable(ttk.Frame):
-    """A Tkinter GUI to find and delete duplicated photos.
+    """A Tkinter GUI to find and delete duplicated pictures.
 
-    ADP = Any Duplicated Photos,
+    ADP = Any Duplicated Pictures,
 
     kwargs:
         cfe - concurrent.future.Executor. Its value is either "process" or
@@ -82,40 +79,24 @@ class ADPTable(ttk.Frame):
     self: Create and display the Find, Gallery and About widgets and bind the
           events of these widgets.
     Find: Let user choose a directory and searches it and its children
-          directories for duplicated photos. Its search result is store in a
+          directories for duplicated pictures. Its search result is store in a
           sqlite3 database.
     Table: - Display the search result from the Find widget in a text-based
              scrollable ttk.Treeview widget.
-           - Allow selection and deselection of single or multiple photo file
-             item(s) and the deletion of these selected photos.
+           - Allow selection and deselection of single or multiple picture file
+             item(s) and the deletion of these selected pictures.
     About: Display the Copyright, License and sources code of this program.
     """
 
     def __init__(self, master, **options):
-        try:
-            cfe = options.pop("cfe")
-        except KeyError:
-            self.cfe = "process"  # default value
-        else:
-            if cfe in ["process", "thread"]:
-                self.cfe = cfe
-            else:
-                raise ValueError(f"cfe={cfe} is invalid. It's value must "
-                                 f"either be 'process' or 'thread'.")
-        try:
-            layout = options.pop("layout")
-        except KeyError:
-            self.layout = "vertical"  # default value
-        else:
-            if layout in ["horizontal", "vertical"]:
-                self.layout = layout
-            else:
-                raise ValueError(f"layout={layout} is invalid. It's value must "
-                                 f"either be 'horizontal' or 'vertical'.")
+        self.cfe = pop_kwargs("cfe", ["process", "thread"], options)
+        self.layout = pop_kwargs("layout", ["vertical", "horizontal"], options)
         super().__init__(master, **options)
         self.master = master
         self._create_widgets()
         self._create_bindings()
+        self.update_idletasks()
+        print(f"{self.winfo_reqwidth()=} {self.winfo_reqheight()=}")
 
     def _create_widgets(self):
         self.find = Find(self, layout=self.layout, cfe=self.cfe)
@@ -125,25 +106,19 @@ class ADPTable(ttk.Frame):
         self.table.set_sdir(self.find.selected_dir)
         self.table.set_sql3db(self.find.sqlite3_db)
 
-        if self.layout in "vertical":
-            align = "left"
-        elif self.layout in "horizontal":
-            align = "right"
-        self.about = About(self, align=align, style="About.TFrame")
+        self.about = About(self, align="right", style="About.TFrame")
 
         self.find.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 10))
         if self.layout in "vertical":
             self.table.grid(row=0, column=1, sticky="nsew", padx=(0, 5))
-            self.about.grid(row=1, column=0, columnspan=2, sticky="nsew")
+            self.about.grid(row=1, column=1, sticky="e")
             self.columnconfigure(1, weight=1)
             self.rowconfigure(0, weight=1)
-            self.winfo_toplevel().minsize(width=800, height=500)
         elif self.layout in "horizontal":
             self.table.grid(row=1, column=0, sticky="nsew", padx=5)
-            self.about.grid(row=2, column=0, sticky="nse", padx=5)
+            self.about.grid(row=2, column=0, sticky="e", padx=5)
             self.columnconfigure(0, weight=1)
             self.rowconfigure(1, weight=1)
-            self.winfo_toplevel().minsize(width=1200, height=600)
 
     def _create_bindings(self):
         self.find.unbind("<<DirectorySelected>>")
@@ -153,13 +128,11 @@ class ADPTable(ttk.Frame):
         self.table.bn_delete.bind("<<DeletionDone>>", self.event_recheck)
 
     def event_reset(self, event):
-        # print(f"\ndef event_reset(self, event):")
-        # 2. Reset Table
+        # 1. Reset Table
         if self.table.tree.get_children():
-            # print(f"Reset table")
             self.table.reset_table()
         self.table.set_tree_column0_heading_text(self.table.sdir.get())
-        # 1. Enable find button
+        # 2. Enable find button
         self.find.bn_find.instate(["disabled"], self.find.enable_find_button)
 
     def event_recheck(self, event):
@@ -173,9 +146,9 @@ class ADPTable(ttk.Frame):
 
 
 class ADPGallery(ttk.Frame):
-    """A Tkinter GUI to find and delete duplicated photos.
+    """A Tkinter GUI to find and delete duplicated pictures.
 
-    ADP = Any Duplicated Photos,
+    ADP = Any Duplicated Pictures,
 
     kwargs:
         cfe - concurrent.future.Executor. Its value is either "process" or
@@ -186,44 +159,24 @@ class ADPGallery(ttk.Frame):
     self: Create and display the Find, Gallery and About widgets and bind the
           events of these widgets.
     Find: Let user choose a directory and searches it and its children
-          directories for duplicated photos. Its search result is store in a
+          directories for duplicated pictures. Its search result is store in a
           sqlite3 database.
-    Gallery: - Display the search result from the Find widget in its Table
-               widget and in a scrollable Viewport.
-             - Allow selection and deselection of single or multiple photo file
-               item(s) and the deletion of these selected photos.
+    Gallery: - Display the search result from the Find widget in a text-based
+               scrollable ttk.Treeview widget.and pictorially in the
+               VerticalScrollFrame widget.
+             - Allow selection and deselection of single or multiple pictures
+               and the deletion of these selected pictures.
     About: Display the Copyright, License and sources code of this program.
     """
 
     def __init__(self, master, **options):
-
-        # 1. Define attributes etype, layout and orient
-        try:
-            cfe = options.pop("cfe")
-        except KeyError:
-            self.cfe = "process"  # default value
-        else:
-            if cfe in ["process", "thread"]:
-                self.cfe = cfe
-            else:
-                raise ValueError(f"cfe={cfe} is invalid. It's value must "
-                                 f"either be 'process' or 'thread'.")
-        try:
-            layout = options.pop("layout")
-        except KeyError:
-            self.layout = "horizontal"  # default value
-        else:
-            if layout in ["horizontal", "vertical"]:
-                self.layout = layout
-            else:
-                raise ValueError(f"layout={layout} is invalid. It's value must "
-                                 f"either be 'horizontal' or 'vertical'.")
-        finally:
-            match self.layout:
-                case "vertical":
-                    self.orient = "vertical"
-                case "horizontal":
-                    self.orient = "horizontal"
+        self.cfe = pop_kwargs("cfe", ["process", "thread"], options)
+        self.layout = pop_kwargs("layout", ["vertical", "horizontal"], options)
+        match self.layout:
+            case "vertical":
+                self.orient = "vertical"
+            case "horizontal":
+                self.orient = "horizontal"
 
         super().__init__(master, **options)
         self.master = master
@@ -235,57 +188,47 @@ class ADPGallery(ttk.Frame):
         self.find.hide_selected_path()
 
         self.gallery = Gallery(self, orient=self.orient)
-        table = self.gallery.table
-        table.set_sdir(self.find.selected_dir)
-        table.set_sql3db(self.find.sqlite3_db)
+        self.gallery.set_sdir(self.find.selected_dir)
+        self.gallery.set_sql3db(self.find.sqlite3_db)
 
-        if self.layout in "vertical":
-            align = "left"
-        elif self.layout in "horizontal":
-            align = "right"
-        self.about = About(self, align=align, style="About.TFrame")
+        self.about = About(self, align="right", style="About.TFrame")
 
         self.find.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 10))
         if self.layout in "vertical":
             self.gallery.grid(row=0, column=1, sticky="nsew", padx=(0, 5))
-            self.about.grid(row=1, column=0, columnspan=2, sticky="nsew")
+            self.about.grid(row=1, column=1, sticky="e")
             self.columnconfigure(1, weight=1)
             self.rowconfigure(0, weight=1)
-            self.winfo_toplevel().minsize(width=1000, height=600)
         elif self.layout in "horizontal":
             self.gallery.grid(row=1, column=0, sticky="nsew", padx=5)
             self.about.grid(row=2, column=0, sticky="nse", padx=5)
             self.columnconfigure(0, weight=1)
             self.rowconfigure(1, weight=1)
-            self.winfo_toplevel().minsize(width=1200, height=500)
 
     def _create_bindings(self):
-        find = self.find
-        table = self.gallery.table
+        self.find.unbind("<<DirectorySelected>>")
+        self.find.bind("<<DirectorySelected>>", self.event_reset_app)
+        self.find.bind("<<Sqlite3DBPopulated>>",
+                       self.gallery.event_populate_tree_the_first_time)
+        self.gallery.bn_delete.bind("<<DeletionDone>>", self.event_recheck)
 
-        find.unbind("<<DirectorySelected>>")
-        find.bind("<<DirectorySelected>>", self.event_reset)
-        find.bind("<<Sqlite3DBPopulated>>",
-                  table.event_populate_tree_the_first_time)
-        table.bn_delete.bind("<<DeletionDone>>", self.event_recheck)
-
-    def event_reset(self, event):
-        # print(f"\ndef event_reset(self, event):")
-        # 2. Reset Table
-        table = self.gallery.table
-        if table.tree.get_children():
-            # print(f"Reset table")
-            table.reset_table()
-        self.after_idle(table.set_tree_column0_heading_text, table.sdir.get())
-        self.gallery.update_idletasks()
-        # 1. Enable find button
+    def event_reset_app(self, event):
+        # 1. Reset Gallery, i.e. Table and Viewport
+        gallery = self.gallery
+        if gallery.tree.get_children():
+            gallery.reset_table()
+            gallery.reset_viewport()
+            gallery.create_tree_bindings_part_2()
+        self.after_idle(gallery.set_tree_column0_heading_text,
+                        gallery.sdir.get())
+        self.update_idletasks()
+        # 2. Enable find button
         self.after_idle(self.find.enable_find_button)
 
     def event_recheck(self, event):
-        # print(f"\ndef event_recheck(self, event):")
         print(f"\nRecheck {self.find.selected_dir.get()}")
         self.find.reset()
-        self.event_reset(event)
+        self.event_reset_app(event)
         self.after_idle(self.find.bn_find.invoke)
 
     def exit(self):
@@ -310,14 +253,15 @@ class ADP(tk.Tk):
 
         # 2. Show logo in terminal
         show_logo_in_terminal()
+        print(f"{mode=} {layout=} {cfe=}")
 
         # 3. Initialise and set up Tk window
         super().__init__()
         self["background"] = BG
-        self.title('ANY DUPLICATED PHOTOS?')
+        self.title('ANY DUPLICATED PICTURES?')
 
         # 4. Sets the titlebar icon for the Tk window
-        app_icon = str(CWD) + "/icons/app/ADP_icon_256.png"
+        app_icon = str(CWD) + "/icons/adp/ADP_icon_256.png"
         wm_icon = ImageTk.PhotoImage(file=app_icon)
         wm_icon.image = app_icon
         self.tk.call('wm', 'iconphoto', self, wm_icon)
@@ -331,11 +275,27 @@ class ADP(tk.Tk):
         self.rowconfigure(0, weight=1)
         match mode:
             case "find":
-                self.app = ADPFind(self, cfe="process")
+                self.geometry('420x440+0+30')
+                self.minsize(width=420, height=440)
+                self.resizable(width=True, height=False)
+                self.app = ADPFind(self, cfe=cfe)
             case "table":
-                self.app = ADPTable(self, cfe="process", layout=layout)
+                match layout:
+                    case "horizontal":
+                        self.minsize(width=1210, height=500)
+                        self.geometry('1210x500+0+30')
+                    case "vertical":
+                        self.minsize(width=800, height=500)
+                        self.geometry('1280x500+0+30')
+                self.app = ADPTable(self, cfe=cfe, layout=layout)
             case "gallery":
-                self.geometry('1300x600')
+                self.geometry('1300x600+0+0')
+                match layout:
+                    case "horizontal":
+                        self.minsize(width=1210, height=500)
+                    case "vertical":
+                        self.minsize(width=1000, height=600)
+                self.geometry('1300x600+0+30')
                 self.app = ADPGallery(self, cfe=cfe, layout=layout)
         self.app.grid(row=0, column=0, sticky='nsew', padx=10, pady=(10, 0))
 
@@ -353,6 +313,7 @@ class ADP(tk.Tk):
         if mbox:
             print(f"\nExiting ADP...")
             self.app.exit()
+            self.quit()
             self.destroy()
 
 
@@ -366,7 +327,7 @@ def show_logo_in_terminal():
         f"   / AA AA AA AA AA    | DD      | DD  | PPPPPPPP/  \n"
         f"  / AA__________/ AA   | DD     | DD   | PP_____/   \n"
         f" / AA            \ AA  | DDDDDDDD /    | PP         \n"
-        f" \/_/             \/_/ |/_______/      |/_/    ANY DUPLICATED PHOTOS?"
+        f" \/_/             \/_/ |/_______/      |/_/    ANY DUPLICATED PICTURES?"
         )
 
 
@@ -374,24 +335,27 @@ def main():
     """Function run ADP GUI via commandline."""
     # 1. Set up the argument parser
     parser = argparse.ArgumentParser(
-        description="GUI to find and delete duplicated photos quickly.")
+        description="Application to find and delete duplicated pictures "
+                    "quickly.")
 
     # 2. Define parser optional arguments
-    mode = {"f": "find", "t": "table", "g": "gallery"}
+    mode = {"g": "gallery", "t": "table", "f": "find"}
     parser.add_argument("-m", "--mode",
                         type=str, default='g', choices=mode.keys(),
-                        help="Run ADP in either 'f=find', 't=table' or "
-                             "'g=gallery' mode.")
+                        help="Run in either 'gallery', 'table' or 'find' "
+                             "mode. Default is 'gallery'.")
     layouts = {"h": "horizontal", "v": "vertical"}
     parser.add_argument("-l", "--layout",
                         type=str, choices=layouts.keys(),
-                        help="Set GUI layout to be either 'h=horizontal', or "
-                             "'v=vertical'.")
+                        help="Set GUI to use either a 'horizontal' or "
+                             "'vertical' layout. Default for `gallery` and "
+                             "`table` modes is 'horizontal' layout. 'find' "
+                             "mode allows only 'vertical' layout.")
     cfe = {"p": "process", "t": "thread"}
     parser.add_argument("-c", "--cfe",
                         type=str, default='p', choices=cfe.keys(),
-                        help="Set concurrent.future.Executor to either "
-                             "'p=process' or 't=thread' type.")
+                        help="Use CPU 'process' or 'thread' pool for "
+                             "execution. Default is 'process'.")
 
     # 3. Get the submitted arguments
     args = parser.parse_args()
@@ -404,8 +368,8 @@ def main():
             try:
                 lay = layouts[args.layout]
             except KeyError as exc:
-                if not exc.args[0]:
-                    lay = "vertical"
+                if not exc.args[0]:  # catch NoneType
+                    lay = "horizontal"
                 else:
                     raise KeyError(exc.args[0])
             finally:
@@ -414,22 +378,22 @@ def main():
             try:
                 lay = layouts[args.layout]
             except KeyError as exc:
-                if not exc.args[0]:
+                if not exc.args[0]:  # catch NoneType
                     lay = "horizontal"
                 else:
                     raise KeyError(exc.args[0])
             finally:
-                ADP(mode=mode[args.mode], layout=lay, cfe="thread")
-                # Note: cfe="process" in gallery mode results in unstable
-                #       performance. Consequently, cfe="thread" must be used
-                #       in the meantime.
+                ADP(mode=mode[args.mode], layout=lay, cfe=cfe[args.cfe])
 
 
 ###############################################################################
 # App SCRIPT TO CALL APPLICATION
 ###############################################################################
-if __name__ == '__main__':
-    # ADP(mode="find", cfe="process")  # stable
-    # ADP(mode="table", layout="vertical", cfe="process")  # stable
-    # ADP(mode="gallery", layout="horizontal", cfe="process")  # unstable: hangs randomly after several reruns
-    ADP(mode="gallery", layout="horizontal", cfe="thread")  # stable but slower than cfe="process"
+# if __name__ == '__main__':
+    # ADP(mode="find", cfe="process")
+    # ADP(mode="table", layout="horizontal", cfe="process")
+    # ADP(mode="table", layout="vertical", cfe="process")
+    # ADP(mode="gallery", layout="horizontal", cfe="process")
+    # ADP(mode="gallery", layout="vertical", cfe="process")
+    # ADP(mode="gallery", layout="horizontal", cfe="thread")
+    # ADP(mode="gallery", layout="vertical", cfe="thread")

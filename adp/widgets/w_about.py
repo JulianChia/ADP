@@ -6,16 +6,20 @@ import tkinter.ttk as ttk
 import webbrowser
 from functools import partial
 
+# External Packages
+from PIL import Image, ImageTk
+
 # Project modules
-from adp.widgets.constants import BG, FG, DFONT
+from adp.widgets.constants import BG, FG, DFONT, CWD
 from adp.widgets.w_tkHyperlinkManager import HyperlinkManager
 from adp.widgets.w_tools import get_geometry_values, str_geometry_values
 
 __all__ = ["About"]
 __version__ = '0.1'
-__author__ = 'Chia Yan Hon, Julian.'
-__copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __license__ = "Apache License, Version 2.0"
+__copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
+__author__ = 'Chia Yan Hon, Julian.'
+__email__ = "julianchiayh@gmail.com"
 
 
 class About(ttk.Frame):
@@ -31,7 +35,7 @@ class About(ttk.Frame):
             else:
                 raise ValueError(f"align={align} is invalid. It's value must "
                                  f"either be 'left' or 'right'.")
-        super().__init__(master,**options)
+        super().__init__(master, **options)
         self.master = master
         self.bn_copyright = None
         self.bn_source = None
@@ -40,13 +44,19 @@ class About(ttk.Frame):
         self.license_hyperlink = None
         self.license_bn_close = None
 
+        i1 = Image.open(str(CWD) + '/icons/adp/ADP_icon_32.png')
+        self.icon = ImageTk.PhotoImage(i1)
+        self.icon.image = i1
+
         self._create_widgets()
         self._create_bindings()
 
     def _create_widgets(self):
         # Copyright and source buttons
-        cr = f"Copyright © 2024, Chia Yan Hon, Julian."
-        self.bn_copyright = ttk.Button(self, text=cr, style="About.TButton")
+        # cr = f"Copyright © 2024, Chia Yan Hon, Julian."
+        self.bn_copyright = ttk.Button(self, style="About.TButton",
+                                       # text=cr, compound='left',
+                                       image=self.icon)
         self.bn_copyright.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
 
         # License window - toplevel
@@ -118,7 +128,6 @@ class About(ttk.Frame):
         license.update_idletasks()
         license.protocol('WM_DELETE_WINDOW', self._close_license)
         self.license_geometry = get_geometry_values(license.winfo_geometry())
-        # print(f"{self.license_geometry=}")
         license.withdraw()  # Hide the window.
 
     def _create_bindings(self):
@@ -137,7 +146,6 @@ class About(ttk.Frame):
         w_geo = get_geometry_values(event.widget.winfo_geometry())
         wm_geo = get_geometry_values(widget_master.winfo_geometry())
         wtl_geo = get_geometry_values(widget_toplevel.winfo_geometry())
-        print(f"{l_geo=} {w_geo=} {wm_geo=} {wtl_geo=}")
 
         # New width, height, x, y of self.license
         wm_decorator_height = 40
@@ -152,11 +160,10 @@ class About(ttk.Frame):
             return str_geometry_values(l_geo[0], l_geo[1], new_x, new_y)
 
         match self.align:
-             case "left":
-                 license_new_geom = align_top_left()
-             case "right":
-                 license_new_geom = align_top_right()
-        print(f"{license_new_geom=}")
+            case "left":
+                license_new_geom = align_top_left()
+            case "right":
+                license_new_geom = align_top_right()
 
         # Configure appearance of self.bn_copyright, self.license & root
         widget = event.widget  # is self.bn_copyright
@@ -176,7 +183,7 @@ class About(ttk.Frame):
 
     @staticmethod
     def _show_sourcecode():
-        url = f"https://github.com/JulianChia"
+        url = f"https://github.com/JulianChia/adp"
         webbrowser.open_new(url)
 
 

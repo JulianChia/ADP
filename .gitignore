@@ -4,3 +4,5 @@ __pycache__
 !/.gitignore
 *.xcf
 *.svg
+*.webm
+*.mp4

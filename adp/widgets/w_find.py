@@ -1,34 +1,35 @@
-# print(f"{__name__}")
-
 # Python modules
 import os
 import threading
 import queue
+import signal
 from time import perf_counter
+
 import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter import filedialog
+
 
 # External Packages
 from PIL import Image, ImageTk
 
 # Project modules
-from adp.functions import timings
-from adp.widgets.duplicates_db import DuplicatesDB
-from adp.functions import (fast_scandir,
-                           scandir_images_concurrently, )
+from adp.functions.tools import timings, pop_kwargs
+from adp.functions.picture_finder_concurrent_one_folder import get_rasterimages_in_one_folder_concurrently
+from adp.functions.picture_finder_concurrent import (fast_scandir, scandir_images_concurrently)
 from adp.functions.duplicates_finder_serial import detect_duplicates_serially
-from adp.functions.duplicates_finder_concurrent import (
-    detect_duplicates_concurrently)
+from adp.functions.duplicates_finder_concurrent import (detect_duplicates_concurrently)
 from adp.widgets.constants import CWD, HOME, RING1, RING2, MSG0, BG
+from adp.widgets.duplicates_db import DuplicatesDB
 from adp.widgets.w_findindicators import DonutCharts, Findings
 from adp.widgets.w_progressbar import Progressbarwithblank
 
 __all__ = ["Find"]
 __version__ = '0.1'
-__author__ = 'Chia Yan Hon, Julian.'
-__copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __license__ = "Apache License, Version 2.0"
+__copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
+__author__ = 'Chia Yan Hon, Julian.'
+__email__ = "julianchiayh@gmail.com"
 
 
 class Find(ttk.Frame):
@@ -38,18 +39,18 @@ class Find(ttk.Frame):
     Composition:
     It is a ttk.Frame widget that comprises 7 children widgets, namely:
     1. A "Folder" button to select a directory/folder that is to be searched
-       for duplicated photos. All its sub-directories will also be searched.
-    2. A "Find" button to first find all the photo files and second to find
-       which of these photo files have duplicate(s). To expedite these
-       find processes, a concurrent find photo algorithms and a
+       for duplicated pictures. All its sub-directories will also be searched.
+    2. A "Find" button to first find all the picture files and second to find
+       which of these picture files have duplicate(s). To expedite these
+       find processes, a concurrent find picture algorithms and a
        serial/concurrent find duplicates algorithm are used.
     3. A Progressbarwithblank widget to animate the busy state of the cpu
        during the find processes.
     4. A Findings table to tabulate the Find results.
-    5. Two donut charts to show the quantity and percentage of photos that are
+    5. Two donut charts to show the quantity and percentage of pictures that are
        either unique or duplicates, and their respective byte sizes.
     6. Two DonutCharts widgets to show the quantity and percentage of duplicated
-       photos that are either the original or copies, and their respective byte
+       pictures that are either the original or copies, and their respective byte
        sizes.
     7. A label to show use-instructions and the selected directory path.
 
@@ -65,59 +66,49 @@ class Find(ttk.Frame):
                          sub-directories.
        - self.rimages is a list of RasterImage instances.
        - self.duplicates is a dict of {hashhex: a set object with str objects
-                         that define the full path of the found photo
+                         that define the full path of the found picture
                          duplicates}.
-       - self.quantities is a tuple of integers defining the number of photos
+       - self.quantities is a tuple of integers defining the number of pictures
                          that are duplicates, originals, and copies.
 
     Generated Virtual Events:
     "<<DirectorySelected>>" - generated after selecting directory.
-    "<<FindDone>>"          - generated after detecting duplicated photos.
+    "<<FindDone>>"          - generated after detecting duplicated pictures.
+
+    icons source:
+    <img src="https://icons.iconarchive.com/icons/franksouza183/fs/48/Places-user-image-icon.png" width="48" height="48">
+    <img src="https://icons.iconarchive.com/icons/franksouza183/fs/48/Actions-find-icon.png" width="48" height="48">
     """
 
-    def __init__(self, master, **options):
-        self.master = master
-        try:
-            layout = options.pop("layout")
-        except KeyError:
-            self.layout = "vertical"  # default value
-        else:
-            if layout in ["horizontal", "vertical"]:
-                self.layout = layout
-            else:
-                raise ValueError(f"layout={layout} is invalid. It's value must "
-                                 f"either be 'horizontal' or 'vertical'.")
-        try:
-            cfe = options.pop("cfe")
-        except KeyError:
-            self.cfe = "process"  # default value
-        else:
-            if cfe in ["process", "thread"]:
-                self.cfe = cfe  # concurrent.future.Executor
-            else:
-                raise ValueError(f"cfe={cfe} is invalid. It's value must "
-                                 f"either be 'process' or 'thread'.")
+    def __init__(self, master, **options) -> None:
+        self._cfe = pop_kwargs("cfe", ["process", "thread"], options)
+        self._layout = pop_kwargs("layout", ["vertical", "horizontal"], options)
         super().__init__(master, **options)
 
-        # Initialise widget's icons variables
-        i1 = Image.open(str(CWD) +
-                        '/icons/franksouza183/Places-user-image-icon.png')
-        i2 = Image.open(str(CWD) + '/icons/franksouza183/Actions-find-icon.png')
-        self.icon_imgdir = ImageTk.PhotoImage(i1)
-        self.icon_find = ImageTk.PhotoImage(i2)
-        self.icon_imgdir.image = i1
-        self.icon_find.image = i2
+        # Initialise icons attributes
+        i1 = Image.open(str(CWD) + '/icons/Places-user-image-icon.png')
+        i2 = Image.open(str(CWD) + '/icons/Actions-find-icon.png')
+        self._icon_imgdir = ImageTk.PhotoImage(i1)
+        self._icon_find = ImageTk.PhotoImage(i2)
+        self._icon_imgdir.image = i1
+        self._icon_find.image = i2
 
-        # Initialise widget's variables
+        # Initialise public attributes
+        self.master = master
         self.selected_dir = tk.StringVar()  # updated by invoking Folder Button
         self.subfolders = None  # list of str objects
         self.rimages = []  # list of RasterImage instances
-        self.duplicates = {}  # dict stores found duplicated photos
+        self.duplicates = {}  # dict stores found duplicated pictures
         self.quantities = None  # tuple(nduplicates, noriginals, ncopies)
-        self._image_queue = queue.Queue()  # for moving stuff from thread to tk
-        self._duplicates_queue = queue.Queue()  # for moving stuff from thread to tk
-        self._find_queue = queue.Queue()  # for moving stuff from thread to tk
 
+        # Initialise Find process attributes
+        self._findthread = None  # threading.Thread object
+        self._dupthread = None  # threading.Thread object
+        self._findqueue = queue.Queue()  # for moving stuff from threads to tkinter during the Find process
+        self._exitevent = threading.Event()  # for graceful exit
+        self._start0 = None
+
+        # Initialise children widgets attributes
         self.bn_folder = None  # ttk.Button
         self.bn_find = None  # ttk.Button
         self.w_tab = None  # Custom widget
@@ -125,6 +116,8 @@ class Find(ttk.Frame):
         self.w_dup = None  # Custom widget
         self.w_pb = None  # Custom widget
         self.w_selected_path = None  # ttk.Label
+        self._progress = tk.DoubleVar()
+        self._progress.set(0.0)
 
         # Create sqlite database
         self.sqlite3_db = DuplicatesDB()
@@ -134,17 +127,26 @@ class Find(ttk.Frame):
         self._create_widgets()
         self._create_bindings()
 
-    def _create_widgets(self):
+        # Define handling of SIGTERM
+        signal.signal(signal.SIGTERM, self._exit_signal_handler)
+
+    def _exit_signal_handler(self, signal_number, frame):
+        print(f'Received Signal {signal_number} {frame}')
+        self._exitevent.set()
+
+    def _create_widgets(self) -> None:
         # Create Widgets
-        self.bn_folder = ttk.Button(self, text='Folder', image=self.icon_imgdir,
+        self.bn_folder = ttk.Button(self, text='Folder',
+                                    image=self._icon_imgdir,
                                     compound=tk.LEFT,
                                     command=self._select_directory)
-        self.bn_find = ttk.Button(self, text='Find', image=self.icon_find,
+        self.bn_find = ttk.Button(self, text='Find',
+                                  image=self._icon_find,
                                   compound=tk.LEFT,
                                   command=self._start_find_duplicates_algorithm,
                                   )
         self.w_tab = Findings(self)
-        self.w_pho = DonutCharts(self, title0="Photos", title1="Qty",
+        self.w_pho = DonutCharts(self, title0="Pictures", title1="Qty",
                                  title2="Size",
                                  legend1="Unique", legend2="Duplicates",
                                  **RING1)
@@ -159,22 +161,26 @@ class Find(ttk.Frame):
                                          textvariable=self.selected_dir)
         self.selected_dir.set(MSG0)
         self.w_pb = Progressbarwithblank(self, orient=tk.VERTICAL,
-                                         mode='indeterminate')
+                                         mode='determinate',
+                                         variable=self._progress,
+                                         maximum=1.0, second=True)
         self.w_pb.blank["style"] = "Blank.TLabel"
+        self.w_pb.hide_pb2()
 
         # Grid Widgets
-        self.bn_folder.grid(row=0, column=0, sticky='nw')
+        self.bn_folder.grid(row=0, column=0, sticky='nw', pady=(0, 5))
         self.bn_find.grid(row=1, column=0, sticky='nw')
-        self.w_pb.grid_pb(row=0, column=1, rowspan=2, sticky='nsw', padx=(5, 0))
+        self.w_pb.grid_pb(row=0, column=1, rowspan=2,  sticky='nsw',
+                          padx=(5, 0))
         self.w_tab.grid(row=0, column=2, rowspan=2, sticky='nw', padx=(5, 0))
-        if self.layout in "horizontal":
+        if self._layout in "horizontal":
             self.w_pho.grid(row=0, column=3, rowspan=2, sticky='nw',
                             padx=(20, 0))
             self.w_dup.grid(row=0, column=4, rowspan=2, sticky='nw',
                             padx=(20, 0))
             self.w_selected_path.grid(row=2, column=0, columnspan=4,
                                       sticky="nw")
-        elif self.layout in "vertical":
+        elif self._layout in "vertical":
             self.w_selected_path.grid(row=2, column=0, columnspan=4,
                                       sticky='nw')
             self.w_pho.grid(row=3, column=0, columnspan=4, sticky='nw',
@@ -185,21 +191,20 @@ class Find(ttk.Frame):
 
         self.w_pb.hide()
 
-    def _create_bindings(self):
+    def _create_bindings(self) -> None:
         self.bind("<<DirectorySelected>>", self._event_enable_bn_find)
         self.bind("<<FindDone>>", self._event_populate_sqlite_db)
 
     # --------- Event Handlers --------- #
-    def _event_enable_bn_find(self, event):
+    def _event_enable_bn_find(self, event) -> None:
         # print(f"\ndef _event_enable_bn_find(self, event):")
         self.bn_find.instate(["disabled"], self.enable_find_button)
 
-    def _event_disable_bn_find(self, event):
+    def _event_disable_bn_find(self, event) -> None:
         # print(f"\ndef _event_disable_bn_find(self, event):")
         self.bn_find.instate(["!disabled"], self.disable_find_button)
 
-
-    def _event_populate_sqlite_db(self, event):
+    def _event_populate_sqlite_db(self, event) -> None:
         r0 = perf_counter()
         self.sqlite3_db.populate(self.selected_dir.get(), self.duplicates)
         r1 = perf_counter()
@@ -210,38 +215,39 @@ class Find(ttk.Frame):
         # print(f'<<Sqlite3DBPopulated>> generated by {self}')
 
     # --------- Methods ---------#
-    def show_selected_path(self):
+    def show_selected_path(self) -> None:
         self.w_selected_path.grid()
 
-    def hide_selected_path(self):
+    def hide_selected_path(self) -> None:
         self.w_selected_path.grid_remove()
 
-    def disable_buttons(self):
+    def disable_buttons(self) -> None:
         self.disable_folder_button()
         self.disable_find_button()
 
-    def disable_find_button(self):
+    def disable_find_button(self) -> None:
         self.bn_find.state(['disabled'])
 
-    def disable_folder_button(self):
+    def disable_folder_button(self) -> None:
         self.bn_folder.state(['disabled'])
 
-    def enable_buttons(self):
+    def enable_buttons(self) -> None:
         self.enable_folder_button()
         self.enable_find_button()
 
-    def enable_find_button(self):
+    def enable_find_button(self) -> None:
         self.bn_find.state(['!disabled'])
 
-    def enable_folder_button(self):
+    def enable_folder_button(self) -> None:
         self.bn_folder.state(['!disabled'])
 
-    def reset(self):
+    def reset(self) -> None:
         # 1. Reset widgets
         self.w_tab.reset()
         self.w_pho.reset()
         self.w_dup.reset()
-        # Reset attributes
+        self._progress.set(0.0)
+        # 2. Reset attributes
         if self.rimages:
             self.rimages.clear()
         if self.duplicates:
@@ -250,13 +256,18 @@ class Find(ttk.Frame):
             self.quantities = None
         if not self.sqlite3_db.is_table_empty():
             self.sqlite3_db.reset_table()
+        del self._findthread
+        del self._dupthread
+        self._findthread = None
+        self._dupthread = None
 
-    def exit(self):
+    def exit(self) -> None:
+        self._exitevent.set()
         self.reset()
         self.sqlite3_db.close()
 
     # --------- Callbacks ---------#
-    def _select_directory(self):
+    def _select_directory(self) -> None:
         """Callback to configure tk.filedialog.askdirectory widget behaviour and
         to set the value of the control variable self.selected_dir which defines
         the path that is to be scanned. Activated by ttk.Button self.bn_folder.
@@ -284,26 +295,25 @@ class Find(ttk.Frame):
         else:
             # Use the selected directory and reset all attributes of this class.
             self.selected_dir.set(new)
-            print(f'\n{self.selected_dir.get()}')
+            text = f"\n{self.selected_dir.get()}"
+            print(text)
             self.reset()
             # Generate virtual event <<DirectorySelected>>
             # print(f'<<DirectorySelected>> generated')
             self.event_generate("<<DirectorySelected>>", when="tail")
 
-    def _start_find_duplicates_algorithm(self):
+    def _start_find_duplicates_algorithm(self) -> None:
         """Callback to recursively scan self.selected_dir and its subdirectories
-        for photo duplicates. A concurrent-process algorithm is used to quickly
-        search for raster images. Their duplicates are then detected either
-        serially or concurrently depending on conditions. The concurrent
+        for picture duplicates. A concurrent-process algorithm is used to
+        quickly search for raster images. Their duplicates are then detected
+        either serially or concurrently depending on conditions. The concurrent
         algorithm to find raster images is many times faster than a serial
         approach. Invoked after clicking self.bn_find.
         """
-        # print(f"\ndef _start_find_duplicates_algorithm(self):")
         # 1. Get path
         folder = self.selected_dir.get()
-        # print(f"{type(folder)=} {folder=}")
 
-        # 2. Run progress bar and find photos plus detect duplicates using
+        # 2. Run progress bar and find pictures plus detect duplicates using
         # two different threads.
         if not folder:
             return  # Do nothing when self.selected_dir does not have a path
@@ -313,162 +323,159 @@ class Find(ttk.Frame):
         # 3. Update widgets appearances
         self.disable_buttons()
         self.w_pb.show()
-        self.w_pb.start(10)
 
         # 4. Find all subfolders within folder recursively & update self.w_tab
-        start0 = perf_counter()
-        subfolders = fast_scandir(folder)
+        self._start0 = perf_counter()
+        self.subfolders = fast_scandir(folder)
         end0 = perf_counter()
-        nsubfolders = len(subfolders)
-        time_subfolders = end0 - start0
+        nsubfolders = len(self.subfolders)
+        time_subfolders = end0 - self._start0
         tsf, tsf_units = timings(time_subfolders)
         self.w_tab.update_subfolders(nsubfolders, tsf, tsf_units)
-        print(f"Found {nsubfolders} subfolders in {time_subfolders:.6f} secs.")
+        text = f"Subfolders: Found {nsubfolders} in {time_subfolders:.6f} secs."
+        print(text)
 
-        # 5. Find photos within folder and its subfolders & update self.w_tab
-        start1 = perf_counter()
-        folders = [folder] + subfolders
-        findthread = threading.Thread(target=self._find_raster_images_in,
-                                      args=(folders,), name="findthread")
-        findthread.start()
-        self._check_thread(findthread, start0)
-
-    def _find_raster_images_in(self, folders):
-        """Find raster images in folder and its subfolders"""
-        # print(f"\ndef _find_raster_images_in(self, folders):")
-        start = perf_counter()
-        rimages = scandir_images_concurrently(folders, cfe=self.cfe)
-        # print(f"{rimages=}")
-        end = perf_counter()
-        self._find_queue.put(("rimages", rimages))
-        time_findphotos = end - start
-        nphotos = len(rimages)
-        tp, tp_units = timings(time_findphotos)
-        self._find_queue.put(("nphotos", nphotos, tp, tp_units))
-        print(f'Found {nphotos} photos in {time_findphotos:.6f} secs.')
-
-    def _check_thread(self, thread, start0):
-        # print(f"\ndef _check_thread(self, thread, start0):")
-        duration = 100
-        try:
-            info = self._find_queue.get(block=False)
-        except queue.Empty:
-            # let's try again later
-            self.after(duration, lambda: self._check_thread(thread, start0))
+        # 5. Find pictures within folder and its subfolders & update self.w_tab
+        if self._cfe in "proocess":
+            self.update()
+        self._check_find_queue()
+        if nsubfolders == 0:
+            self.after(100,
+                       self._start_concurrent_picture_detection_for_one_folder)
         else:
-            # print(f"self._check_thread got, {info=}")
-            # Extract info from queue
-            match info[0]:
-                case "rimages":
-                    self.rimages = info[1]
-                    self.after(duration, lambda: self._check_thread(thread,
-                                                                    start0))
-                case "nphotos":
-                    self.w_tab.update_photos(*info[1:])
-                    self._dupthread(start0)
+            self.after(100,
+                       self._start_concurrent_picture_detection_for_many_folders)
 
-    def _dupthread(self, start0):
-        dupthread = threading.Thread(target=self._detect_duplicates,
-                                     args=(start0,), name="dupthread")
-        dupthread.start()
-        self._check_duplicates_queue(start0, dupthread)
-
-    def _detect_duplicates(self, start0):
-        """Detect duplicated photos in self.rimage & update self.w_tab"""
-        # print(f"\ndef _detect_duplicates(self, start0):")
-        # print(f"{threading.main_thread()=} {threading.current_thread()=}")
-        dup_queue = self._duplicates_queue
-        start2 = perf_counter()
+    def _detect_duplicates(self) -> None:
+        """Detect duplicated pictures in self.rimage"""
         if len(self.rimages) <= 1000:
-            duplicates = detect_duplicates_serially(self.rimages)
+            self.after(100,
+                       self._start_serial_duplicates_detection)
         else:
             try:
-                duplicates = detect_duplicates_concurrently(self.rimages,
-                                                            cfe=self.cfe)
+                self.after(100,
+                           self._start_concurrent_pool_duplicates_detection)
             except ValueError:
-                duplicates = detect_duplicates_serially(self.rimages)
-        end2 = perf_counter()
-        dup_queue.put(("duplicates", duplicates))
+                self.after(100,
+                           self._start_serial_duplicates_detection)
 
-        noriginals = len(duplicates)
-        ncopies = sum([len(i) - 1 for i in duplicates.values()])
-        nduplicates = noriginals + ncopies
-        quantities = (nduplicates, noriginals, ncopies)
-        time_findduplicates = end2 - start2
-        time_total = end2 - start0
-        td, td_units = timings(time_findduplicates)
-        tt, tt_units = timings(time_total)
-        dup_queue.put(("nduplicates", nduplicates, td, td_units))
-        dup_queue.put(("quantities", quantities))
-        dup_queue.put(("ntotal", tt, tt_units))
-        print(f'Found {nduplicates} duplicated photos in'
-              f' {time_findduplicates:.6f} secs with ({noriginals}'
-              f' originals & {ncopies} copies).\n'
-              f'Total time is {time_total:.6f} secs.')
+    def _start_concurrent_picture_detection_for_one_folder(self) -> None:
+        self._findthread = threading.Thread(
+            target=get_rasterimages_in_one_folder_concurrently,
+            args=(self.selected_dir.get(), self._findqueue),
+            kwargs={"ncpu": os.cpu_count(),
+                    "cfe": self._cfe,
+                    "exit_event": self._exitevent},
+            name="findthread",)
+        self._findthread.start()
 
-        # Calculate Size (Bytes) of Duplicates
-        size_o = sum([os.stat(j).st_size for i in
-                      duplicates.values() for j in list(i)[:1]])
-        size_c = sum([os.stat(j).st_size for i in
-                      duplicates.values() for j in list(i)[:-1]])
-        # Calculate Size (Bytes) of Photos
-        size_p = sum((i.size for i in self.rimages))
-        size_d = size_o + size_c
-        size_u = size_p - size_d
-        # print(f"{size_p=} {size_d=} {size_u=}")
-        # Calculate quantity of non-duplicated photos in self.rimages
-        nphotos = len(self.rimages)
-        nunique = nphotos - nduplicates
-        # print(f"{nunique=}")
-        dup_queue.put(("w_pho", nunique, nduplicates, size_u, size_d))
-        dup_queue.put(("w_dup", noriginals, ncopies, size_o, size_c))
+    def _start_concurrent_picture_detection_for_many_folders(self) -> None:
+        folders = [self.selected_dir.get()] + self.subfolders
+        self._findthread = threading.Thread(
+            target=scandir_images_concurrently,
+            args=(folders, self._findqueue),
+            kwargs={"ncpu": os.cpu_count(),
+                    "cfe": self._cfe,
+                    "exit_event": self._exitevent},
+            name="findthread",)
+        self._findthread.start()
 
-    def _check_duplicates_queue(self, start0, dthread):
-        # print(f"\ndef _check_duplicates_queue(self, start0):")
-        duration = 100
+    def _start_serial_duplicates_detection(self) -> None:
+        self._dupthread = threading.Thread(
+            target=detect_duplicates_serially,
+            args=(self.rimages, self._findqueue),
+            name="dupthread",)
+        self._dupthread.start()
+
+    def _start_concurrent_pool_duplicates_detection(self) -> None:
+        self._dupthread = threading.Thread(
+            target=detect_duplicates_concurrently,
+            args=(self.rimages, self._findqueue),
+            kwargs={"ncpu": os.cpu_count(),
+                    "cfe": self._cfe,
+                    "exit_event": self._exitevent},
+            name="dupthread",)
+        self._dupthread.start()
+
+    def _check_find_queue(self) -> None:
+        duration = 1
         try:
-            info = self._duplicates_queue.get(block=False)
+            # Extract info from queue
+            info = self._findqueue.get(block=False)
         except queue.Empty:
-            # let's try again later
-            self.after(duration, lambda: self._check_duplicates_queue(start0,
-                                                                      dthread))
+            self.after(duration, lambda: self._check_find_queue())
         else:
-            # print(f"self._check_duplicates_queue got, {info=}")
-            # print(f"{dthread.name}.is_alive()={dthread.is_alive()}"
-            #       f" {threading.main_thread()=} {threading.current_thread()=}")
+            # print(f"self._check_find_queue got, {info=}")
+            # Proces info
             match info[0]:
-                case "nduplicates":
-                    self.w_tab.update_duplicates(*info[1:])
-                    self.after(duration,
-                               lambda: self._check_duplicates_queue(start0,
-                                                                    dthread))
-                case "duplicates":
-                    self.duplicates = info[1]
-                    # print(f"{self.duplicates=}")
-                    self.after(duration,
-                               lambda: self._check_duplicates_queue(start0,
-                                                                    dthread))
-                case "quantities":
-                    self.quantities = info[1]
-                    self.after(duration,
-                               lambda: self._check_duplicates_queue(start0,
-                                                                    dthread))
-                case "ntotal":
-                    self.w_tab.update_total(*info[1:])
-                    self.after(duration,
-                               lambda: self._check_duplicates_queue(start0,
-                                                                    dthread))
-                case "w_pho":
-                    self.w_pho.update_gui(*info[1:])
-                    self.after(duration,
-                               lambda: self._check_duplicates_queue(start0,
-                                                                    dthread))
-                case "w_dup":
-                    self.w_dup.update_gui(*info[1:])
-                    self.w_pb.stop()
+                case "FindRunning":
+                    jobs_completed, njobs = info[1:]
+                    self._progress.set(jobs_completed/njobs)
+                    self.after(duration, lambda: self._check_find_queue())
+                case "FindCompleted":
+                    self.rimages, start1, end1 = info[1:]
+                    time_findpictures = end1 - start1
+                    npictures = len(self.rimages)
+                    tp, tp_units = timings(time_findpictures)
+                    self.w_tab.update_pictures(npictures, tp, tp_units)
+                    text = (f'\n{"Found":>17} {npictures} in'
+                            f' {time_findpictures:.6f} secs.')
+                    print(text)
+                    if self.rimages:
+                        self._progress.set(0.0)
+                        self._detect_duplicates()
+                    else:
+                        total_time = end1-self._start0
+                        text = (f'Duplicates: Found 0.\n'
+                                f'Total time: {total_time:.6f} secs.')
+                        print(text)
+                        self.w_tab.update_duplicates(0, 0.0, "secs")
+                        self.w_tab.update_total(tp, tp_units)
+                        self.w_pho.update_gui(0, 0, 0.0, 0.0)
+                        self.w_dup.update_gui(0, 0, 0.0, 0.0)
+                        self.w_pb.hide()
+                        self.enable_folder_button()
+                        self.after_idle(self.event_generate, "<<FindDone>>")
+                    self.after(duration, lambda: self._check_find_queue())
+                case "DupRunning":
+                    jobs_completed, njobs = info[1:]
+                    self._progress.set(jobs_completed / njobs)
+                    self.after(duration, lambda: self._check_find_queue())
+                case "DupCompleted":
+                    duplicates, start2, end2 = info[1:]
+                    self.duplicates = duplicates
+                    noriginals = len(duplicates)
+                    ncopies = sum([len(i) - 1 for i in duplicates.values()])
+                    nduplicates = noriginals + ncopies
+                    self.quantities = (nduplicates, noriginals, ncopies)
+                    time_findduplicates = end2 - start2
+                    time_total = end2 - self._start0
+                    td, td_units = timings(time_findduplicates)
+                    tt, tt_units = timings(time_total)
+                    self.w_tab.update_duplicates(nduplicates, td, td_units)
+                    self.w_tab.update_total(tt, tt_units)
+                    text = (f'\n{"Found":>17} {nduplicates} in'
+                            f' {time_findduplicates:.6f} secs:'
+                            f' {noriginals} originals & {ncopies} copies.\n'
+                            f'Total time: {time_total:.6f} secs.')
+                    print(f"{text}")
+                    # Calculate Size (Bytes) of Duplicates
+                    size_o = sum([os.stat(j).st_size for i in
+                                  duplicates.values() for j in list(i)[:1]])
+                    size_c = sum([os.stat(j).st_size for i in
+                                  duplicates.values() for j in list(i)[:-1]])
+                    # Calculate Size (Bytes) of Pictures
+                    size_p = sum((i.size for i in self.rimages))
+                    size_d = size_o + size_c
+                    size_u = size_p - size_d
+                    # Calculate quantity of non-duplicated pictures in
+                    # self.rimages
+                    npictures = len(self.rimages)
+                    nunique = npictures - nduplicates
+                    self.w_pho.update_gui(nunique, nduplicates, size_u, size_d)
+                    self.w_dup.update_gui(noriginals, ncopies, size_o, size_c)
                     self.w_pb.hide()
                     self.enable_folder_button()
-                    # print(f'<<FindDone>> generated by {self}')
                     self.after_idle(self.event_generate, "<<FindDone>>")
 
 
@@ -477,17 +484,28 @@ if __name__ == '__main__':
     import tkinter.messagebox as messagebox
 
     root = tk.Tk()
-    root.title('ANY DUPLICATED PHOTOS?')
+    root.title('ANY DUPLICATED PICTURES?')
     root["background"] = BG
     s = ttk.Style()
     # Initialise customised widgets styles
     w_ttkstyle.customise_ttk_widgets_style(s)
-    # app = Find(root, layout="row")
-    app = Find(root, layout="vertical", cfe="process")
-    app.grid(row=0, column=0, sticky='nsew', padx=10, pady=(10, 0))
+    find = Find(root)                         # cfe="process", layout="vertical"
+    # find = Find(root, cfe="thread")         # cfe="thread",  layout="vertical"
+    # find = Find(root, layout="horizontal")  # cfe="process", layout="horizontal"
+    find.grid(row=0, column=0, sticky='nsew', padx=10, pady=(10, 0))
     root.rowconfigure(0, weight=1)  # stretch vertically
-    # root.rowconfigure(1, weight=1)  # stretch vertically
     root.columnconfigure(0, weight=1)  # stretch horizontally
+
+    # def exit_gracefully(signal_number, frame):
+    #     print(f'Received Signal {signal_number} {frame}')
+    #     sys.exit(0)
+    #
+    # def exit_immediately(signal_number, frame):
+    #     print(f'Received Signal {signal_number} {frame}')
+    #     os.kill(os.getppid(), signal.SIGKILL)
+    #
+    # signal.signal(signal.SIGTERM, exit_gracefully)
+    # signal.signal(signal.SIGINT, exit_immediately)
 
     def exit_root():
         """Function for shutting down root window"""
@@ -496,7 +514,8 @@ if __name__ == '__main__':
                                       icon="question", default="ok")
         if mbox:
             print(f"\nExiting Application...")
-            app.exit()
+            find.exit()
+            root.quit()
             root.destroy()
 
     # Setup root window's shutdown
