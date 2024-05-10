@@ -89,6 +89,6 @@ The command `pipenv sync` ensures the installation of these packages.
    Please refer to the source codes for their details.
 2. Programming highlights:
    1. Algorithm to search out pictures and their duplicates quickly.
-   2. A paging system to view searched results in tkinter widgets with the mousewheel without overflowing memory and minimal lag.
+   2. A paging system to view searched results in tkinter widgets with the mousewheel without overflowing memory and with minimal lag.
    3. Stable integration of Python's `threading.Thread`, `concurrent.futures.ProcessPoolExecutor` and `concurrent.futures.ThreadPoolExecutor` objects with tkinter's main event loop. 
 
