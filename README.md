@@ -1,12 +1,12 @@
 # adp.py
 ![Title](docs/images/ADP_find_table_gallery_modes.png)
-`adp` denotes _"ANY DUPLICATED PICTURES?"_. It is a simple-to-use Python module that let's you quickly find and delete duplicated picture files in a desktop/laptop. All you have to do is to click the <kbd>Folder</kbd> button to select a folder that you want to search, followed by clicking on the <kbd>Find</kbd> button to search it and all its subfolders for duplicated pictures. Once completed, you can click on the duplicated pictures you want to delete and finally click on the <kbd>Delete</kbd> button to delete them.
+`adp` (_"ANY DUPLICATED PICTURES?"_) is a simple-to-use, mini-sized, Python module that let's you quickly find and delete duplicated picture files in a desktop/laptop. All you have to do is to click the <kbd>Folder</kbd> button to select a folder that you want to search, followed by clicking on the <kbd>Find</kbd> button to search it and all its subfolders for duplicated pictures. Once completed, you can click on the duplicated pictures you want to delete and finally click on the <kbd>Delete</kbd> button to delete them. `adp.py` is only 1.2 MB in size, so it is fast to download and install. 
 
 Notes: 
 1. _Original_ denotes the earliest version of a duplicate picture and is colour coded in green. _Copies_ denotes its later versions and is colour coded in blue. Clicking the <kbd>Originals</kbd> or <kbd>Copies</kbd> buttons toggles their quick selection/deselection.
 2. To manually select/deselect multiple picture files, press the <kbd>Shift</kbd> key in your keyboard followed by clicking the first and last file paths with your mouse pointer. You can also select/deselect a single picture file by simply clicking on its filepath or thumbnail-image.
-3. Using `cfe=process` is much faster than `cfe=thread` as it involves using a pool of your CPU logical cores (i.e. process-pool) vs a pool of your CPU threads (i.e. thread-pool) to find pictures and their duplicates. That is why `ADP` defaults to using process-pool.
-4. The diagram below illustrates just how much faster ADP can be when using many logical cores vs 1 logical core to find pictures and their duplicates in a NVME storage disk. Contrast of faster performance is most obvious when large quantities of large pictures(i.e, high resolution pictures) and their duplicates are processed. Consequently, ADP defaults to using all your CPU logical cores.
+3. Using `cfe=process` is much faster than `cfe=thread` as it involves using a pool of your CPU logical cores (i.e. process-pool) vs a pool of CPU threads (i.e. thread-pool) to find pictures and their duplicates. That is why `ADP` defaults to using process-pool.
+4. The diagram below illustrates just how much faster ADP can be when using many logical cores vs 1 logical core to find pictures and their duplicates in a NVME storage disk. The contrast of faster performance is most obvious when large quantities of large pictures(i.e, high resolution pictures) and their duplicates are processed. Consequently, ADP defaults to using all available CPU logical cores.
 
    <p align="center">
      <img src="docs/images/ADP_Performances.png" width=950" alt="Performances">
@@ -20,6 +20,7 @@ Notes:
 If you like this work, please support it: 
 1. If you are from Singapore, Malaysia, Indonesia or Thailand, **PayNow** is available.
 2. If you are from other countries, <a href="https://www.buymeacoffee.com/JulianChia" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 30px !important;width: 109px !important;" align="center"></a>.
+
 
 ## How To Install?
 1. Clone/create this repository into your computer. 
@@ -87,7 +88,7 @@ The command `pipenv sync` ensures the installation of these packages.
        Find duplicates:  detect_duplicates_concurrently, detect_duplicates_serially
        For terminal:     main, percent_complete, show_logo_in_terminal
    Please refer to the source codes for their details.
-2. Programming highlights:
+2. Python script highlights:
    1. Algorithm to search out pictures and their duplicates quickly.
    2. A paging system to view searched results in tkinter widgets with the mousewheel without overflowing memory and with minimal lag.
    3. Stable integration of Python's `threading.Thread`, `concurrent.futures.ProcessPoolExecutor` and `concurrent.futures.ThreadPoolExecutor` objects with tkinter's main event loop. 
