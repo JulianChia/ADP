@@ -559,7 +559,8 @@ if __name__ == '__main__':
             self._create_bindings()
 
         def _create_widgets(self) -> None:
-            self.find = Find(self, cfe=self.cfe, layout=self.layout)
+            self.find = Find(self, gallery=True, cfe=self.cfe,
+                             layout=self.layout)
             self.find.hide_selected_path()
             self.find.w_pb.pb2.configure(mode="indeterminate")
 

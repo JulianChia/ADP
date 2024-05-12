@@ -4,16 +4,16 @@
 
 Notes: 
 1. _Original_ denotes the earliest version of a duplicate picture and is colour coded in green. _Copies_ denotes its later versions and is colour coded in blue. Clicking the <kbd>Originals</kbd> or <kbd>Copies</kbd> buttons toggles their quick selection/deselection.
-2. To manually select/deselect multiple picture files, press the <kbd>Shift</kbd> key in your keyboard followed by clicking the first and last file paths with your mouse pointer. You can also select/deselect a single picture file by simply clicking on its filepath or thumbnail-image.
-3. Using `cfe=process` is much faster than `cfe=thread` as it involves using a pool of your CPU logical cores (i.e. process-pool) vs a pool of CPU threads (i.e. thread-pool) to find pictures and their duplicates. That is why `ADP` defaults to using process-pool.
-4. The diagram below illustrates just how much faster ADP can be when using many logical cores vs 1 logical core to find pictures and their duplicates in a NVME storage disk. The contrast of faster performance is most obvious when large quantities of large pictures(i.e, high resolution pictures) and their duplicates are processed. Consequently, ADP defaults to using all available CPU logical cores.
+2. The maximum "Duplicates Group" number is always one less the quantity of _Original_ pictures.
+3. To manually select/deselect multiple picture files, press the <kbd>Shift</kbd> key in your keyboard followed by clicking the first and last file paths with your mouse pointer. You can also select/deselect a single picture file by simply clicking on its filepath or thumbnail-image.
+4. Using `cfe=process` is much faster than `cfe=thread` as it involves using a pool of your CPU logical cores (i.e. process-pool) vs a pool of CPU threads (i.e. thread-pool) to find pictures and their duplicates. That is why `ADP` defaults to using process-pool.
+5. The diagram below illustrates just how much faster ADP can be when using many logical cores vs 1 logical core to find pictures and their duplicates in a NVMe.m.2 solid-state-drive (SSD). The contrast of faster performance is most obvious when large quantities of large pictures(i.e, high resolution pictures) and their duplicates are processed. Consequently, ADP defaults to using all available CPU logical cores.
 
    <p align="center">
      <img src="docs/images/ADP_Performances.png" width=950" alt="Performances">
    </p>
 
-5. If your pictures are in a traditional hard disk (HDD), it is recommended that you transfer your pictures to a SSD or NVME storage disk before using ADP to seacrch them. This is because the performance of a HDD is snail pace compared to a SSD or NVME disk and the high performance from using process or thread pool will be mitigated. Moreover, ADP is set to timeout if a search for pictures or the detection of duplicates exceeds 10 minutess.
-6. The maximum "Duplicates Group" number is always one less the quantity of _Original_ pictures. 
+6. If your pictures are in a traditional hard disk (HDD), it is recommended that you transfer your pictures to a SSD before using ADP to search out picture duplicates. This is because the performance of a HDD is snail pace compared to a SSD and the high performance from using process or thread pool will be mitigated by the HDD. Moreover, ADP is set to timeout if a search for pictures or picture duplicates exceeds 10 minutes. 
 
 
 ## Support This Project

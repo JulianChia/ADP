@@ -184,7 +184,7 @@ class ADPGallery(ttk.Frame):
         self._create_bindings()
 
     def _create_widgets(self):
-        self.find = Find(self, layout=self.layout, cfe=self.cfe)
+        self.find = Find(self, gallery=True, layout=self.layout, cfe=self.cfe)
         self.find.hide_selected_path()
 
         self.gallery = Gallery(self, orient=self.orient)
@@ -253,7 +253,6 @@ class ADP(tk.Tk):
 
         # 2. Show logo in terminal
         show_logo_in_terminal()
-        print(f"{mode=} {layout=} {cfe=}")
 
         # 3. Initialise and set up Tk window
         super().__init__()

@@ -80,7 +80,9 @@ class Find(ttk.Frame):
     <img src="https://icons.iconarchive.com/icons/franksouza183/fs/48/Actions-find-icon.png" width="48" height="48">
     """
 
-    def __init__(self, master, **options) -> None:
+    def __init__(self, master, gallery=False, **options) -> None:
+        self.master = master
+        self._gallery = gallery
         self._cfe = pop_kwargs("cfe", ["process", "thread"], options)
         self._layout = pop_kwargs("layout", ["vertical", "horizontal"], options)
         super().__init__(master, **options)
@@ -94,7 +96,6 @@ class Find(ttk.Frame):
         self._icon_find.image = i2
 
         # Initialise public attributes
-        self.master = master
         self.selected_dir = tk.StringVar()  # updated by invoking Folder Button
         self.subfolders = None  # list of str objects
         self.rimages = []  # list of RasterImage instances
@@ -336,8 +337,9 @@ class Find(ttk.Frame):
         print(text)
 
         # 5. Find pictures within folder and its subfolders & update self.w_tab
-        if self._cfe in "proocess":
-            self.update()
+        if self._gallery and self._cfe in "process":
+            self.update()  # for better stability
+
         self._check_find_queue()
         if nsubfolders == 0:
             self.after(100,
