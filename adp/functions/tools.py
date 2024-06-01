@@ -5,7 +5,7 @@ from typing import Union
 
 __all__ = ["filesize", "timings", "sort_pictures_by_creation_time",
            "percent_complete", "pop_kwargs"]
-__version__ = '0.1'
+__version__ = '0.1.1'
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __author__ = 'Chia Yan Hon, Julian.'

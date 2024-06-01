@@ -16,7 +16,7 @@ from adp.functions import filesize
 
 __all__ = ["DupGroup", "get_thumbnail", "get_thumbnail_c",
            "get_thumbnails_concurrently_with_queue", ]
-__version__ = '0.1'
+__version__ = '0.1.1'
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __author__ = 'Chia Yan Hon, Julian.'

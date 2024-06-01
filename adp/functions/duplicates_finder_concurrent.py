@@ -11,7 +11,7 @@ from adp.functions.tools import percent_complete
 
 __all__ = ["detect_duplicates_concurrently", "reshape_list1d",
            "check_hash_duplication"]
-__version__ = '0.1'
+__version__ = '0.1.1'
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __author__ = 'Chia Yan Hon, Julian.'

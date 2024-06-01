@@ -18,7 +18,7 @@ from adp.widgets.w_about import About
 
 __all__ = ["ADPFind", "ADPTable", "ADPGallery", "ADP",
            "show_logo_in_terminal", "main"]
-__version__ = '0.1'
+__version__ = '0.1.1'
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __author__ = 'Chia Yan Hon, Julian.'
@@ -319,14 +319,14 @@ class ADP(tk.Tk):
 def show_logo_in_terminal():
     print()
     print(
-        f"        /AAAA           /DDDDDDDD       /PPPPPPPP   \n"
-        f"      / AA _/AA        | DD     | DD   | PP_____/PP \n"
-        f"     / AA   \ AA       | DD      | DD  | PP     | PP\n"
-        f"    / AA     \ AA      | DD      | DD  | PP     | PP\n"
-        f"   / AA AA AA AA AA    | DD      | DD  | PPPPPPPP/  \n"
-        f"  / AA__________/ AA   | DD     | DD   | PP_____/   \n"
-        f" / AA            \ AA  | DDDDDDDD /    | PP         \n"
-        f" \/_/             \/_/ |/_______/      |/_/    ANY DUPLICATED PICTURES?"
+        f"        /AAAA          /DDDDDDDD       /PPPPPPPP   \n"
+        f"      / AA _/AA       | DD     | DD   | PP_____/PP \n"
+        f"     / AA   \ AA      | DD      | DD  | PP     | PP\n"
+        f"    / AA     \ AA     | DD      | DD  | PP     | PP\n"
+        f"   / AA AA A AA AA    | DD      | DD  | PPPPPPPP/  \n"
+        f"  / AA_________/ AA   | DD     | DD   | PP_____/   \n"
+        f" / AA           \ AA  | DDDDDDDD /    | PP         \n"
+        f" \/_/            \/_/ |/_______/      |/_/    ANY DUPLICATED PICTURES?"
         )
 
 
@@ -388,11 +388,11 @@ def main():
 ###############################################################################
 # App SCRIPT TO CALL APPLICATION
 ###############################################################################
-# if __name__ == '__main__':
+if __name__ == '__main__':
     # ADP(mode="find", cfe="process")
     # ADP(mode="table", layout="horizontal", cfe="process")
     # ADP(mode="table", layout="vertical", cfe="process")
-    # ADP(mode="gallery", layout="horizontal", cfe="process")
+    ADP(mode="gallery", layout="horizontal", cfe="process")
     # ADP(mode="gallery", layout="vertical", cfe="process")
     # ADP(mode="gallery", layout="horizontal", cfe="thread")
     # ADP(mode="gallery", layout="vertical", cfe="thread")

@@ -10,7 +10,7 @@ from adp.widgets.constants import CWD, GROUPS_IN_A_PAGE
 from adp.functions.tools import sort_pictures_by_creation_time, filesize
 
 __all_ = ["DuplicatesDB"]
-__version__ = '0.1'
+__version__ = '0.1.1'
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __author__ = 'Chia Yan Hon, Julian.'

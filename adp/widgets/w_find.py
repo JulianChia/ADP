@@ -25,7 +25,7 @@ from adp.widgets.w_findindicators import DonutCharts, Findings
 from adp.widgets.w_progressbar import Progressbarwithblank
 
 __all__ = ["Find"]
-__version__ = '0.1'
+__version__ = '0.1.1'
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __author__ = 'Chia Yan Hon, Julian.'

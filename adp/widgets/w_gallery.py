@@ -20,7 +20,7 @@ from adp.widgets.w_dupgroups import (DupGroup,
                                      get_thumbnails_concurrently_with_queue)
 
 __all__ = ["Gallery"]
-__version__ = '0.1'
+__version__ = '0.1.1'
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __author__ = 'Chia Yan Hon, Julian.'

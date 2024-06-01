@@ -6,7 +6,7 @@ import tkinter.ttk as ttk
 from adp.widgets.constants import *
 
 __all__ = ["customise_ttk_widgets_style", "stylename_elements_options"]
-__version__ = '0.1'
+__version__ = '0.1.1'
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "Copyright 2024, Chia Yan Hon, Julian."
 __author__ = 'Chia Yan Hon, Julian.'
