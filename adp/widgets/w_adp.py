@@ -387,11 +387,11 @@ def main():
 ###############################################################################
 # App SCRIPT TO CALL APPLICATION
 ###############################################################################
-if __name__ == '__main__':
+# if __name__ == '__main__':
     # ADP(mode="find", cfe="process")
     # ADP(mode="table", layout="horizontal", cfe="process")
     # ADP(mode="table", layout="vertical", cfe="process")
-    ADP(mode="gallery", layout="horizontal", cfe="process")
+    # ADP(mode="gallery", layout="horizontal", cfe="process")
     # ADP(mode="gallery", layout="vertical", cfe="process")
     # ADP(mode="gallery", layout="horizontal", cfe="thread")
     # ADP(mode="gallery", layout="vertical", cfe="thread")
