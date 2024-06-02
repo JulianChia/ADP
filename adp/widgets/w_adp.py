@@ -288,7 +288,6 @@ class ADP(tk.Tk):
                         self.geometry('1280x500+0+30')
                 self.app = ADPTable(self, cfe=cfe, layout=layout)
             case "gallery":
-                self.geometry('1300x600+0+0')
                 match layout:
                     case "horizontal":
                         self.minsize(width=1210, height=500)
