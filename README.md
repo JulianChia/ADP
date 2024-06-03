@@ -25,11 +25,11 @@ If you like this app, please : <a href="https://www.buymeacoffee.com/JulianChia"
 ## How To Install and Run ADP?
 
 ### Option 1:
-- To install ADP on any x86_64 Linux distros, you can simply download the `adp_ver011-3.10.14-x86_64.AppImage` file and give it execution permission. 
-- To run/use it, you can either click on the `adp_ver011-3.10.14-x86_64.AppImage` file with your mouse pointer or run this command `./adp_ver011-3.10.14-x86_64.AppImage` on a terminal.
+- To install ADP on any x86_64 Linux distros, you can simply download this [adp_ver011-x86_64.AppImage](https://github.com/JulianChia/Repository/blob/main/Assets/adp_ver011-x86_64.AppImage) file and give it execution permission. 
+- To run/use it, you can either click on the `adp_ver011-3.10.14-x86_64.AppImage` file with your mouse pointer or run this command `./adp_ver011-x86_64.AppImage` on a terminal.
 
 ### Option 2
-For x86_64 Linux, Mac and Windows operating systems installed with `Python 3.10 and above`, you can install `ADP` by following these steps:
+For x86_64 Linux, Mac and Windows operating systems installed with `Python =>3.10`, you can install `ADP` by following these steps:
    1. Clone this repository into your computer. 
       1. You can download a zipped version of ADP by pressing the <kbd>Code</kbd> button on this webpage and then extract the `adp` folder into your computer. 
       2. Alternatively, you can issue this command in your terminal: 
